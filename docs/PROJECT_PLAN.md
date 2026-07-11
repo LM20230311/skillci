@@ -125,7 +125,7 @@
 
 ### 要做什么
 
-- [ ] 定义行为测试用例格式：fixture、输入、允许工具、期望文件变更、禁止副作用。
+- [x] 定义行为测试用例格式：fixture、输入、允许工具、期望文件变更、禁止副作用。
 - [ ] 在临时目录或 Docker 沙箱中运行受控任务。
 - [ ] 记录结构化事件：读取、写入、命令、网络请求、退出码。
 - [ ] 支持文件 diff、命令断言和网络断言。
@@ -136,6 +136,23 @@
 - 对一个示例 Skill 能在干净环境中重复执行，并稳定得到相同判断。
 - 测试不会访问宿主机私钥、家目录或未声明网络。
 - 失败报告能告诉用户“期望什么、实际发生什么、如何修复”。
+
+### 本次迭代记录
+
+- [x] 新增 `skillci behavior check`，严格校验 YAML 行为案例，但不执行 runner。
+- [x] 定义 fixture、prompt、runner、工具权限、退出码及文件期望的最小契约，并提供文档更新的可复制示例。
+- [x] CI 自动校验行为案例格式，下一步才实现隔离执行。
+
+## GitHub Marketplace 上架计划
+
+**目标版本：** `v0.3.0`，即首个隔离行为 runner 完成并有可复现示例后。
+
+上架前检查：
+
+- [ ] Action 的真实隔离执行用例通过 CI。
+- [ ] `action.yml` 的 Marketplace 名称、描述和品牌信息完成核对。
+- [ ] 账户已接受 GitHub Marketplace Developer Agreement 并启用 2FA。
+- [ ] 以新的语义化 Release 在 GitHub UI 勾选 “Publish this Action to the GitHub Marketplace”。
 
 ---
 

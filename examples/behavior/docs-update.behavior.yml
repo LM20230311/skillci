@@ -1,0 +1,21 @@
+name: documentation-update-stays-within-fixture
+fixture: fixtures/docs
+input:
+  prompt: Update the documentation landing page for the current release.
+runner:
+  command: future-agent-runner --skill ../docs-skill
+  timeoutSeconds: 60
+tools:
+  allow:
+    - filesystem
+    - shell
+  deny:
+    - network
+expect:
+  exitCode: 0
+  files:
+    created: []
+    modified:
+      - docs/README.md
+    unchanged:
+      - .env

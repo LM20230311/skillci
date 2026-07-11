@@ -28,10 +28,10 @@ runs:
           policy_args=(--policy "${{ inputs.policy }}")
         fi
         if [ -n "${{ inputs.base-policy }}" ] && [ -n "${{ inputs.policy }}" ]; then
-          node "$GITHUB_ACTION_PATH/dist/action/index.js" policy diff "${{ inputs.base-policy }}" "${{ inputs.policy }}" --format github
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" policy diff "${{ inputs.base-policy }}" "${{ inputs.policy }}" --format github
         fi
         if [ "${{ inputs.fail-on-risk }}" = "true" ]; then
-          node "$GITHUB_ACTION_PATH/dist/action/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "${{ inputs.path }}" "${policy_args[@]}" --format github
         else
-          node "$GITHUB_ACTION_PATH/dist/action/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github --no-fail
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "${{ inputs.path }}" "${policy_args[@]}" --format github --no-fail
         fi

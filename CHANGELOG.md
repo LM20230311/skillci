@@ -4,6 +4,10 @@ All notable changes to SkillCI are recorded in this file.
 
 ## [Unreleased]
 
+### Added
+
+- `skillci behavior check` for validating non-executing behavior-test contracts and the first documentation-update fixture example.
+
 ## [0.2.0] - 2026-07-11
 
 ### Added

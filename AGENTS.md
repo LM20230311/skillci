@@ -6,7 +6,7 @@ This file governs all AI-assisted work in this repository. Keep changes small, e
 
 SkillCI is a safety and regression tool for AI Agent Skills. It helps users review risky instructions, enforce policies, and run repeatable checks. Do not represent static analysis as a complete security boundary or a sandbox.
 
-The current implementation is a dependency-light TypeScript CLI and composite GitHub Action. The Action executes the checked-in self-contained bundle at `dist/action/index.js`, so source and generated output must always remain synchronized.
+The current implementation is a dependency-light TypeScript CLI and composite GitHub Action. The Action executes the checked-in self-contained CommonJS bundle at `dist/action/index.cjs`, so source and generated output must always remain synchronized.
 
 ## Required reading and planning
 
@@ -33,6 +33,7 @@ The current implementation is a dependency-light TypeScript CLI and composite Gi
 - Suppressions must remain visible in reports. Do not add a mechanism that silently excludes a file, directory, or rule from audit output.
 - Treat every policy permission expansion as a review signal. When adding a policy field, update `skillci policy diff` so it can classify additions and removals accurately.
 - Do not execute an untrusted Skill while developing a static rule. Behavior tests must use an explicitly isolated fixture strategy.
+- `skillci behavior check` validates a behavior contract only. Do not add runner execution outside an explicit, tested isolation boundary; never describe contract validation as sandboxed execution.
 - Preserve the CLI's documented exit-code behavior: high/critical audit findings and failed cases should fail by default; `--no-fail` must remain an explicit opt-out.
 
 ## Verification checklist

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { writeFileSync } from "node:fs";
 import { audit } from "./audit.js";
+import { renderBehaviorValidation, validateBehaviorCase } from "./behavior.js";
 import { renderTestRun, runCases } from "./cases.js";
 import { initialize } from "./init.js";
 import { diffPolicies, renderPolicyDiff, renderPolicyDiffGitHub, renderPolicyValidation, validatePolicy } from "./policy.js";
@@ -14,6 +15,7 @@ Usage:
   skillci test <cases-path> [--format markdown|json] [--no-fail]
   skillci policy check <file> [--format markdown|json]
   skillci policy diff <before-file> <after-file> [--format markdown|json|github]
+  skillci behavior check <case-file> [--format markdown|json]
 
 Examples:
   skillci init
@@ -23,6 +25,7 @@ Examples:
   skillci test skillci/cases
   skillci policy check skillci/policy.yml
   skillci policy diff policy/main.yml skillci/policy.yml
+  skillci behavior check examples/behavior/docs-update.behavior.yml
   skillci report .github/skills/release --output skillci-report.md
 `;
 async function main(argv) {
@@ -79,6 +82,22 @@ async function main(argv) {
             return;
         }
         throw new Error("policy supports the check and diff subcommands.");
+    }
+    if (command === "behavior") {
+        const [subcommand, ...behaviorArgs] = args;
+        if (subcommand !== "check")
+            throw new Error("behavior supports the check subcommand.");
+        const casePath = positionalArgs(behaviorArgs)[0];
+        if (!casePath)
+            throw new Error("behavior check requires a case file.");
+        const format = option(behaviorArgs, "--format") ?? "markdown";
+        if (format !== "markdown" && format !== "json")
+            throw new Error(`Unsupported behavior format: ${format}`);
+        const validation = validateBehaviorCase(casePath);
+        console.log(format === "json" ? JSON.stringify(validation, null, 2) : renderBehaviorValidation(validation));
+        if (!validation.valid)
+            process.exitCode = 1;
+        return;
     }
     if (command !== "audit" && command !== "report") {
         throw new Error(`Unknown command: ${command}`);
