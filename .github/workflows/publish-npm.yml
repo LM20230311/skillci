@@ -23,5 +23,7 @@ jobs:
       - run: npm ci
       - run: npm test
       - name: Verify release version
-        run: test "v$(node -p \"require('./package.json').version\")" = "${{ github.event.release.tag_name }}"
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          test "v${version}" = "${{ github.event.release.tag_name }}"
       - run: npm publish --access public

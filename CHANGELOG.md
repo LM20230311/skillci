@@ -2,7 +2,7 @@
 
 All notable changes to SkillCI are recorded in this file.
 
-## [0.4.0] - 2026-07-11
+## [0.4.1] - 2026-07-11
 
 ### Added
 

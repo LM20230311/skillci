@@ -100,10 +100,10 @@ npx skillci audit .github/skills
 如果只是临时检查，无需安装：
 
 ```bash
-npx skillci@0.4.0 audit .github/skills
+npx skillci@0.4.1 audit .github/skills
 ```
 
-在 GitHub Actions 工作流中继续使用 `LM20230311/skillci@v0.4.0`。
+在 GitHub Actions 工作流中继续使用 `LM20230311/skillci@v0.4.1`。
 
 ## 三分钟上手
 
@@ -198,7 +198,7 @@ SkillCI 会将新增限制与**权限扩大**分开显示。新增 `allow.networ
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.4.0
+- uses: LM20230311/skillci@v0.4.1
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.4.0
+      - uses: LM20230311/skillci@v0.4.1
         with:
           path: .github/skills
           policy: skillci/policy.yml

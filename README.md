@@ -100,10 +100,10 @@ npx skillci audit .github/skills
 For a one-off check, no installation is needed:
 
 ```bash
-npx skillci@0.4.0 audit .github/skills
+npx skillci@0.4.1 audit .github/skills
 ```
 
-Use `LM20230311/skillci@v0.4.0` when adding the GitHub Action to a workflow.
+Use `LM20230311/skillci@v0.4.1` when adding the GitHub Action to a workflow.
 
 ## Get started in three minutes
 
@@ -198,7 +198,7 @@ The GitHub Action can annotate those expansions when the workflow checks out the
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.4.0
+- uses: LM20230311/skillci@v0.4.1
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.4.0
+      - uses: LM20230311/skillci@v0.4.1
         with:
           path: .github/skills
           policy: skillci/policy.yml

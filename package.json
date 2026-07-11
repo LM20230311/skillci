@@ -1,6 +1,6 @@
 {
   "name": "skillci",
-  "version": "0.4.0",
+  "version": "0.4.1",
   "description": "Security audit and CI reporting for AI agent skills.",
   "license": "MIT",
   "repository": {
