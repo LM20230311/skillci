@@ -3,7 +3,7 @@
 > 这份文件是 SkillCI 的单一迭代记录。每次开发开始前确认当前阶段；每次合并或发布后更新状态、验收结果、版本和下一步。
 
 **当前阶段：** Phase 3 — 隔离行为测试
-**当前版本：** `v0.3.2`（首个 npm 发布候选）
+**当前版本：** `v0.3.2`
 **最后更新：** 2026-07-11
 
 ## 产品北极星
@@ -87,7 +87,7 @@
 | 2026-07-11 | `v0.2.0` | Phase 2 发布：glob、网络主机 allowlist、命令与工作目录策略、可审查抑制和策略 diff。 |
 | 2026-07-11 | `v0.3.0` | Phase 3 发布：受限 Docker 行为 runner、文件断言与 CI 真实执行示例。 |
 | 2026-07-11 | `v0.3.1` | Marketplace 元数据修复并正式上架：Action 展示名为唯一的 `SkillCI Audit`。 |
-| 2026-07-11 | `v0.3.2` | npm 发布候选：首个 CLI 分发，补充 npm 安装文档，远程 CI 已通过。 |
+| 2026-07-11 | `v0.3.2` | 首个 npm CLI 分发：`skillci@0.3.2` 已作为 `latest` 公开发布并完成独立安装验证。 |
 
 ---
 
@@ -167,7 +167,8 @@
 - [x] 验证 `skillci` 包名在 npm registry 中可用。
 - [x] 补充双语 README 的 npm 安装、`npx` 单次运行与 npm badge。
 - [x] `v0.3.2` GitHub Actions CI 已通过（[run 29149090315](https://github.com/LM20230311/skillci/actions/runs/29149090315)）。
-- [ ] 创建 GitHub Release、npm publish 及公开安装验证。
+- [x] 创建 [v0.3.2 GitHub Release](https://github.com/LM20230311/skillci/releases/tag/v0.3.2)。
+- [x] 发布 `skillci@0.3.2` 到 npm 的 `latest` tag，并通过 `npm exec --yes --package=skillci@0.3.2 -- skillci --help` 完成独立安装验证。
 
 ---
 
