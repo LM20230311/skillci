@@ -33,7 +33,7 @@ The current implementation is a dependency-light TypeScript CLI and composite Gi
 - Suppressions must remain visible in reports. Do not add a mechanism that silently excludes a file, directory, or rule from audit output.
 - Treat every policy permission expansion as a review signal. When adding a policy field, update `skillci policy diff` so it can classify additions and removals accurately.
 - Do not execute an untrusted Skill while developing a static rule. Behavior tests must use an explicitly isolated fixture strategy.
-- `skillci behavior check` validates a behavior contract only. Do not add runner execution outside an explicit, tested isolation boundary; never describe contract validation as sandboxed execution.
+- `skillci behavior check` validates a behavior contract only. `skillci behavior run` may execute only through its explicit, tested Docker isolation boundary: a copied fixture workspace, no network, no host mounts beyond that workspace, least container privileges, and resource limits. Never describe either command as a complete security boundary.
 - Preserve the CLI's documented exit-code behavior: high/critical audit findings and failed cases should fail by default; `--no-fail` must remain an explicit opt-out.
 
 ## Verification checklist

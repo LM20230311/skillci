@@ -3,7 +3,8 @@ fixture: fixtures/docs
 input:
   prompt: Update the documentation landing page for the current release.
 runner:
-  command: future-agent-runner --skill ../docs-skill
+  image: node:22-alpine
+  command: node runner.mjs
   timeoutSeconds: 60
 tools:
   allow:

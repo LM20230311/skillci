@@ -1,6 +1,9 @@
 name: SkillCI
-description: Audit AI agent skills for risky instructions and scripts.
+description: Audit AI agent skills, enforce policies, and flag risky changes in CI.
 author: SkillCI contributors
+branding:
+  icon: shield
+  color: blue
 inputs:
   path:
     description: Skill or repository path to audit.

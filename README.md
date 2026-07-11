@@ -180,7 +180,7 @@ The GitHub Action can annotate those expansions when the workflow checks out the
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.2.0
+- uses: LM20230311/skillci@v0.3.0
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-- uses: LM20230311/skillci@v0.2.0
+      - uses: LM20230311/skillci@v0.3.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
@@ -260,9 +260,9 @@ node dist/index.js test skillci/cases
 - Failed: 0
 ```
 
-## Define a behavior test before running an Agent
+## Run an Agent behavior test in a constrained workspace
 
-Phase 3 starts with a strict behavior-test contract. It records the fixture, task input, declared runner, allowed and denied tools, expected exit code, and expected file changes—without executing an untrusted runner on your machine.
+Phase 3 uses a strict behavior-test contract. It records the fixture, task input, declared runner, allowed and denied tools, expected exit code, and expected file changes. `skillci behavior check` only validates the contract; `skillci behavior run` runs it in Docker.
 
 ```yaml
 name: documentation-update-stays-within-fixture
@@ -270,7 +270,8 @@ fixture: fixtures/docs
 input:
   prompt: Update the documentation landing page for the current release.
 runner:
-  command: future-agent-runner --skill ../docs-skill
+  image: node:22-alpine
+  command: node runner.mjs
   timeoutSeconds: 60
 tools:
   allow:
@@ -294,7 +295,15 @@ Validate it with:
 skillci behavior check examples/behavior/docs-update.behavior.yml
 ```
 
-This is intentionally a contract validator, not yet an execution engine. The next Phase 3 step will run these cases only inside an explicitly isolated workspace.
+Then run the fixture:
+
+```bash
+skillci behavior run examples/behavior/docs-update.behavior.yml
+```
+
+For the current runner, `tools.deny` must include `network`. SkillCI copies the fixture into a temporary workspace, then starts Docker with `--network none`, a read-only container filesystem, a writable mount for that copied workspace only, dropped Linux capabilities, `no-new-privileges`, and CPU/memory/process limits. It checks the exit code and the created, modified, or unchanged files afterward. Docker must be installed and available to the command.
+
+This is a deliberately narrow execution boundary, not a claim of a complete sandbox: use least-privilege credentials and a dedicated CI runner for untrusted workloads.
 
 ## CLI reference
 
@@ -319,6 +328,9 @@ skillci policy diff <before-file> <after-file> [--format markdown|json|github]
 
 # Validate a behavior-test contract without executing its runner.
 skillci behavior check <case-file> [--format markdown|json]
+
+# Run a behavior case in the constrained Docker runner.
+skillci behavior run <case-file> [--format markdown|json]
 ```
 
 ## Why this project exists
@@ -345,13 +357,12 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 - [x] Inline, reason-required suppressions that remain visible in audit reports
 - [x] Policy diffs that distinguish permission expansions from newly added restrictions
 - [x] Behavior-test contract validation for fixture, input, tools, exit code, and file expectations
+- [x] Docker behavior runner with a copied fixture workspace, network denial, file assertions, and CI coverage
 - [x] YAML regression cases for maximum risk and forbidden rules
 - [x] Composite GitHub Action
 
 ### Next
 
-- [ ] Reviewed suppressions and exceptions with a required reason
-- [ ] Fixture-based behavior tests in an isolated sandbox
 - [ ] Adapters for Codex, Claude Code, Cursor, and GitHub Copilot conventions
 - [ ] A public corpus of unsafe and broken Skills
 - [ ] SARIF upload and richer PR summaries

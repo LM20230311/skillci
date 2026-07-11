@@ -2,11 +2,13 @@
 
 All notable changes to SkillCI are recorded in this file.
 
-## [Unreleased]
+## [0.3.0] - 2026-07-11
 
 ### Added
 
-- `skillci behavior check` for validating non-executing behavior-test contracts and the first documentation-update fixture example.
+- `skillci behavior check` for validating behavior-test contracts and the first documentation-update fixture example.
+- `skillci behavior run`, which runs a copied fixture in a constrained Docker container with network disabled and verifies exit-code and file-change assertions.
+- CI coverage that executes the published behavior fixture with Docker.
 
 ## [0.2.0] - 2026-07-11
 

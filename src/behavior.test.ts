@@ -3,7 +3,7 @@ import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { validateBehaviorCase } from "./behavior.js";
+import { buildDockerArgs, validateBehaviorCase } from "./behavior.js";
 
 test("validates the published behavior case contract", () => {
   const result = validateBehaviorCase("examples/behavior/docs-update.behavior.yml");
@@ -26,4 +26,13 @@ test("rejects unsafe paths and contradictory tool permissions", () => {
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
+});
+
+test("builds a Docker runner with network and privilege restrictions", () => {
+  const validation = validateBehaviorCase("examples/behavior/docs-update.behavior.yml");
+  assert.equal(validation.valid, true);
+  const args = buildDockerArgs("/tmp/skillci-fixture", validation.behavior!);
+  assert.deepEqual(args.slice(0, 8), ["run", "--rm", "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--cap-drop"]);
+  assert.equal(args.includes("no-new-privileges"), true);
+  assert.equal(args.includes("node:22-alpine"), true);
 });

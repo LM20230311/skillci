@@ -1,10 +1,11 @@
-import { existsSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, rmdirSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { dirname, isAbsolute, join, resolve } from "node:path";
+import { spawnSync } from "node:child_process";
 import { parse } from "yaml";
 const TOOLS = new Set(["filesystem", "shell", "network"]);
 /**
- * Validates a behavior-test contract without executing its runner. Executing
- * an Agent belongs to a later, explicitly isolated runner implementation.
+ * Validates a behavior-test contract without executing its runner.
  */
 export function validateBehaviorCase(casePath) {
     const path = resolve(casePath);
@@ -33,7 +34,8 @@ export function validateBehaviorCase(casePath) {
     const prompt = input ? stringValue(input.prompt, "input.prompt", diagnostics) : undefined;
     const runner = objectValue(raw.runner, "runner", diagnostics);
     if (runner)
-        checkKeys(runner, ["command", "timeoutSeconds"], "runner", diagnostics);
+        checkKeys(runner, ["image", "command", "timeoutSeconds"], "runner", diagnostics);
+    const image = runner ? stringValue(runner.image, "runner.image", diagnostics) : undefined;
     const command = runner ? stringValue(runner.command, "runner.command", diagnostics) : undefined;
     const timeoutSeconds = runner ? numberValue(runner.timeoutSeconds, "runner.timeoutSeconds", diagnostics) : undefined;
     if (timeoutSeconds !== undefined && (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 600))
@@ -70,19 +72,109 @@ export function validateBehaviorCase(casePath) {
     }
     if (created && modified && unchanged && created.length + modified.length + unchanged.length === 0)
         diagnostics.push({ path: "expect.files", message: "Specify at least one expected file assertion." });
-    const behavior = name && fixture && prompt && command && timeoutSeconds !== undefined && allowedTools && deniedTools && exitCode !== undefined && created && modified && unchanged
-        ? { name, fixture, input: { prompt }, runner: { command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged } } }
+    const behavior = name && fixture && prompt && image && command && timeoutSeconds !== undefined && allowedTools && deniedTools && exitCode !== undefined && created && modified && unchanged
+        ? { name, fixture, input: { prompt }, runner: { image, command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged } } }
         : undefined;
     return { path, behavior, diagnostics, valid: diagnostics.length === 0 && behavior !== undefined };
 }
 export function renderBehaviorValidation(result) {
     const lines = ["# SkillCI behavior case check", "", `- **Case:** \`${result.path}\``, `- **Status:** ${result.valid ? "✅ valid" : "❌ invalid"}`];
     if (result.valid && result.behavior) {
-        lines.push(`- **Fixture:** \`${result.behavior.fixture}\``, `- **Runner:** \`${result.behavior.runner.command}\``, `- **Timeout:** ${result.behavior.runner.timeoutSeconds}s`);
+        lines.push(`- **Fixture:** \`${result.behavior.fixture}\``, `- **Image:** \`${result.behavior.runner.image}\``, `- **Runner:** \`${result.behavior.runner.command}\``, `- **Timeout:** ${result.behavior.runner.timeoutSeconds}s`);
     }
     if (result.diagnostics.length === 0)
         return `${lines.join("\n")}\n\nThis command validates a contract; it does not execute the runner.\n`;
     lines.push("", "## Diagnostics", "", ...result.diagnostics.map((diagnostic) => `- **${diagnostic.path}:** ${diagnostic.message}`));
+    return `${lines.join("\n")}\n`;
+}
+/** Runs a validated behavior case in an isolated, network-disabled Docker container. */
+export function runBehaviorCase(casePath) {
+    const validation = validateBehaviorCase(casePath);
+    if (!validation.valid || !validation.behavior)
+        return { validation };
+    const behavior = validation.behavior;
+    if (!behavior.tools.deny.includes("network"))
+        throw new Error("Behavior runner requires tools.deny to include network. Network-enabled runs are not supported yet.");
+    const sourceFixture = resolve(dirname(validation.path), behavior.fixture);
+    // Keep the temporary mount below the fixture's parent. Docker Desktop on
+    // macOS commonly shares project directories under /Users but not /var/folders.
+    const temporaryParent = join(dirname(sourceFixture), ".skillci-workspaces");
+    mkdirSync(temporaryParent, { recursive: true });
+    const temporaryRoot = mkdtempSync(join(temporaryParent, "run-"));
+    const workspace = join(temporaryRoot, "workspace");
+    try {
+        cpSync(sourceFixture, workspace, { recursive: true });
+        const before = snapshotWorkspace(workspace);
+        const process = spawnSync("docker", buildDockerArgs(workspace, behavior), {
+            encoding: "utf8",
+            timeout: (behavior.runner.timeoutSeconds + 10) * 1000,
+            maxBuffer: 1024 * 1024
+        });
+        const processError = process.error;
+        if (processError && processError.code !== "ETIMEDOUT")
+            throw new Error(`Unable to run Docker: ${processError.message}`);
+        const after = snapshotWorkspace(workspace);
+        const created = [...after.keys()].filter((path) => !before.has(path)).sort();
+        const deleted = [...before.keys()].filter((path) => !after.has(path)).sort();
+        const modified = [...after.keys()].filter((path) => before.has(path) && before.get(path) !== after.get(path)).sort();
+        const exitCode = process.status ?? 124;
+        const timedOut = processError?.code === "ETIMEDOUT" || process.signal === "SIGTERM";
+        const assertions = evaluateAssertions(behavior, before, after, exitCode);
+        return {
+            validation,
+            execution: {
+                image: behavior.runner.image,
+                command: behavior.runner.command,
+                exitCode,
+                timedOut,
+                stdout: String(process.stdout ?? "").slice(-8000),
+                stderr: String(process.stderr ?? "").slice(-8000),
+                created,
+                modified,
+                deleted,
+                assertions,
+                passed: assertions.every((assertion) => assertion.passed) && !timedOut
+            }
+        };
+    }
+    finally {
+        rmSync(temporaryRoot, { recursive: true, force: true });
+        try {
+            rmdirSync(temporaryParent);
+        }
+        catch {
+            // Leave a non-empty parent in place only if another concurrent run owns it.
+        }
+    }
+}
+export function buildDockerArgs(workspace, behavior) {
+    return [
+        "run", "--rm", "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
+        "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256", "--memory", "512m", "--cpus", "1",
+        "-v", `${workspace}:/workspace:rw`, "-w", "/workspace", behavior.runner.image, "sh", "-lc", behavior.runner.command
+    ];
+}
+export function renderBehaviorRun(result) {
+    if (!result.execution)
+        return renderBehaviorValidation(result.validation);
+    const execution = result.execution;
+    const lines = [
+        "# SkillCI behavior run",
+        "",
+        `- **Case:** \`${result.validation.path}\``,
+        `- **Status:** ${execution.passed ? "✅ passed" : "❌ failed"}`,
+        `- **Isolation:** Docker, network disabled, temporary fixture workspace`,
+        `- **Exit code:** ${execution.exitCode}${execution.timedOut ? " (timed out)" : ""}`,
+        `- **Files:** ${execution.created.length} created, ${execution.modified.length} modified, ${execution.deleted.length} deleted`,
+        "",
+        "## Assertions",
+        "",
+        "| Status | Assertion | Path | Detail |",
+        "| --- | --- | --- | --- |",
+        ...execution.assertions.map((assertion) => `| ${assertion.passed ? "✅" : "❌"} | ${assertion.kind} | \`${assertion.path}\` | ${assertion.detail} |`)
+    ];
+    if (execution.stderr)
+        lines.push("", "## Runner stderr", "", "```text", execution.stderr, "```");
     return `${lines.join("\n")}\n`;
 }
 function invalid(path, message) {
@@ -128,5 +220,32 @@ function checkKeys(value, allowedKeys, path, diagnostics) {
 }
 function isSafeRelativePath(value) {
     return !isAbsolute(value) && !value.split(/[\\/]+/).includes("..");
+}
+function snapshotWorkspace(root) {
+    const files = new Map();
+    for (const entry of readdirSync(root, { withFileTypes: true })) {
+        const path = join(root, entry.name);
+        if (entry.isDirectory()) {
+            for (const [childPath, hash] of snapshotWorkspace(path))
+                files.set(join(entry.name, childPath), hash);
+        }
+        else if (entry.isFile()) {
+            files.set(entry.name, createHash("sha256").update(readFileSync(path)).digest("hex"));
+        }
+        else if (lstatSync(path).isSymbolicLink()) {
+            files.set(entry.name, "symlink");
+        }
+    }
+    return files;
+}
+function evaluateAssertions(behavior, before, after, exitCode) {
+    const assertions = [{ kind: "exit code", path: "process", passed: exitCode === behavior.expect.exitCode, detail: `Expected ${behavior.expect.exitCode}, received ${exitCode}.` }];
+    for (const path of behavior.expect.files.created)
+        assertions.push({ kind: "created", path, passed: !before.has(path) && after.has(path), detail: "Expected file to be newly created." });
+    for (const path of behavior.expect.files.modified)
+        assertions.push({ kind: "modified", path, passed: before.has(path) && after.has(path) && before.get(path) !== after.get(path), detail: "Expected file contents to change." });
+    for (const path of behavior.expect.files.unchanged)
+        assertions.push({ kind: "unchanged", path, passed: before.has(path) && after.has(path) && before.get(path) === after.get(path), detail: "Expected file contents to remain unchanged." });
+    return assertions;
 }
 //# sourceMappingURL=behavior.js.map

@@ -27,5 +27,6 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: node dist/action/index.cjs behavior check examples/behavior/docs-update.behavior.yml
+      - run: node dist/action/index.cjs behavior run examples/behavior/docs-update.behavior.yml
       - run: node dist/action/index.cjs policy diff examples/policies/documentation/policy.yml examples/policies/release/policy.yml --format github
       - run: node dist/action/index.cjs audit examples/risky-skill --format github --no-fail

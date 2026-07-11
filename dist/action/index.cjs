@@ -9682,7 +9682,9 @@ function score(findings) {
 
 // dist/behavior.js
 var import_node_fs3 = require("node:fs");
+var import_node_crypto = require("node:crypto");
 var import_node_path3 = require("node:path");
+var import_node_child_process = require("node:child_process");
 var import_yaml = __toESM(require_dist(), 1);
 var TOOLS = /* @__PURE__ */ new Set(["filesystem", "shell", "network"]);
 function validateBehaviorCase(casePath) {
@@ -9711,7 +9713,8 @@ function validateBehaviorCase(casePath) {
   const prompt = input ? stringValue(input.prompt, "input.prompt", diagnostics) : void 0;
   const runner = objectValue(raw.runner, "runner", diagnostics);
   if (runner)
-    checkKeys(runner, ["command", "timeoutSeconds"], "runner", diagnostics);
+    checkKeys(runner, ["image", "command", "timeoutSeconds"], "runner", diagnostics);
+  const image = runner ? stringValue(runner.image, "runner.image", diagnostics) : void 0;
   const command = runner ? stringValue(runner.command, "runner.command", diagnostics) : void 0;
   const timeoutSeconds = runner ? numberValue(runner.timeoutSeconds, "runner.timeoutSeconds", diagnostics) : void 0;
   if (timeoutSeconds !== void 0 && (!Number.isInteger(timeoutSeconds) || timeoutSeconds < 1 || timeoutSeconds > 600))
@@ -9748,13 +9751,13 @@ function validateBehaviorCase(casePath) {
   }
   if (created && modified && unchanged && created.length + modified.length + unchanged.length === 0)
     diagnostics.push({ path: "expect.files", message: "Specify at least one expected file assertion." });
-  const behavior = name && fixture && prompt && command && timeoutSeconds !== void 0 && allowedTools && deniedTools && exitCode !== void 0 && created && modified && unchanged ? { name, fixture, input: { prompt }, runner: { command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged } } } : void 0;
+  const behavior = name && fixture && prompt && image && command && timeoutSeconds !== void 0 && allowedTools && deniedTools && exitCode !== void 0 && created && modified && unchanged ? { name, fixture, input: { prompt }, runner: { image, command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged } } } : void 0;
   return { path: path2, behavior, diagnostics, valid: diagnostics.length === 0 && behavior !== void 0 };
 }
 function renderBehaviorValidation(result) {
   const lines = ["# SkillCI behavior case check", "", `- **Case:** \`${result.path}\``, `- **Status:** ${result.valid ? "\u2705 valid" : "\u274C invalid"}`];
   if (result.valid && result.behavior) {
-    lines.push(`- **Fixture:** \`${result.behavior.fixture}\``, `- **Runner:** \`${result.behavior.runner.command}\``, `- **Timeout:** ${result.behavior.runner.timeoutSeconds}s`);
+    lines.push(`- **Fixture:** \`${result.behavior.fixture}\``, `- **Image:** \`${result.behavior.runner.image}\``, `- **Runner:** \`${result.behavior.runner.command}\``, `- **Timeout:** ${result.behavior.runner.timeoutSeconds}s`);
   }
   if (result.diagnostics.length === 0)
     return `${lines.join("\n")}
@@ -9762,6 +9765,113 @@ function renderBehaviorValidation(result) {
 This command validates a contract; it does not execute the runner.
 `;
   lines.push("", "## Diagnostics", "", ...result.diagnostics.map((diagnostic) => `- **${diagnostic.path}:** ${diagnostic.message}`));
+  return `${lines.join("\n")}
+`;
+}
+function runBehaviorCase(casePath) {
+  const validation = validateBehaviorCase(casePath);
+  if (!validation.valid || !validation.behavior)
+    return { validation };
+  const behavior = validation.behavior;
+  if (!behavior.tools.deny.includes("network"))
+    throw new Error("Behavior runner requires tools.deny to include network. Network-enabled runs are not supported yet.");
+  const sourceFixture = (0, import_node_path3.resolve)((0, import_node_path3.dirname)(validation.path), behavior.fixture);
+  const temporaryParent = (0, import_node_path3.join)((0, import_node_path3.dirname)(sourceFixture), ".skillci-workspaces");
+  (0, import_node_fs3.mkdirSync)(temporaryParent, { recursive: true });
+  const temporaryRoot = (0, import_node_fs3.mkdtempSync)((0, import_node_path3.join)(temporaryParent, "run-"));
+  const workspace = (0, import_node_path3.join)(temporaryRoot, "workspace");
+  try {
+    (0, import_node_fs3.cpSync)(sourceFixture, workspace, { recursive: true });
+    const before = snapshotWorkspace(workspace);
+    const process2 = (0, import_node_child_process.spawnSync)("docker", buildDockerArgs(workspace, behavior), {
+      encoding: "utf8",
+      timeout: (behavior.runner.timeoutSeconds + 10) * 1e3,
+      maxBuffer: 1024 * 1024
+    });
+    const processError = process2.error;
+    if (processError && processError.code !== "ETIMEDOUT")
+      throw new Error(`Unable to run Docker: ${processError.message}`);
+    const after = snapshotWorkspace(workspace);
+    const created = [...after.keys()].filter((path2) => !before.has(path2)).sort();
+    const deleted = [...before.keys()].filter((path2) => !after.has(path2)).sort();
+    const modified = [...after.keys()].filter((path2) => before.has(path2) && before.get(path2) !== after.get(path2)).sort();
+    const exitCode = process2.status ?? 124;
+    const timedOut = processError?.code === "ETIMEDOUT" || process2.signal === "SIGTERM";
+    const assertions = evaluateAssertions(behavior, before, after, exitCode);
+    return {
+      validation,
+      execution: {
+        image: behavior.runner.image,
+        command: behavior.runner.command,
+        exitCode,
+        timedOut,
+        stdout: String(process2.stdout ?? "").slice(-8e3),
+        stderr: String(process2.stderr ?? "").slice(-8e3),
+        created,
+        modified,
+        deleted,
+        assertions,
+        passed: assertions.every((assertion) => assertion.passed) && !timedOut
+      }
+    };
+  } finally {
+    (0, import_node_fs3.rmSync)(temporaryRoot, { recursive: true, force: true });
+    try {
+      (0, import_node_fs3.rmdirSync)(temporaryParent);
+    } catch {
+    }
+  }
+}
+function buildDockerArgs(workspace, behavior) {
+  return [
+    "run",
+    "--rm",
+    "--network",
+    "none",
+    "--read-only",
+    "--tmpfs",
+    "/tmp:rw,noexec,nosuid,size=64m",
+    "--cap-drop",
+    "ALL",
+    "--security-opt",
+    "no-new-privileges",
+    "--pids-limit",
+    "256",
+    "--memory",
+    "512m",
+    "--cpus",
+    "1",
+    "-v",
+    `${workspace}:/workspace:rw`,
+    "-w",
+    "/workspace",
+    behavior.runner.image,
+    "sh",
+    "-lc",
+    behavior.runner.command
+  ];
+}
+function renderBehaviorRun(result) {
+  if (!result.execution)
+    return renderBehaviorValidation(result.validation);
+  const execution = result.execution;
+  const lines = [
+    "# SkillCI behavior run",
+    "",
+    `- **Case:** \`${result.validation.path}\``,
+    `- **Status:** ${execution.passed ? "\u2705 passed" : "\u274C failed"}`,
+    `- **Isolation:** Docker, network disabled, temporary fixture workspace`,
+    `- **Exit code:** ${execution.exitCode}${execution.timedOut ? " (timed out)" : ""}`,
+    `- **Files:** ${execution.created.length} created, ${execution.modified.length} modified, ${execution.deleted.length} deleted`,
+    "",
+    "## Assertions",
+    "",
+    "| Status | Assertion | Path | Detail |",
+    "| --- | --- | --- | --- |",
+    ...execution.assertions.map((assertion) => `| ${assertion.passed ? "\u2705" : "\u274C"} | ${assertion.kind} | \`${assertion.path}\` | ${assertion.detail} |`)
+  ];
+  if (execution.stderr)
+    lines.push("", "## Runner stderr", "", "```text", execution.stderr, "```");
   return `${lines.join("\n")}
 `;
 }
@@ -9808,6 +9918,31 @@ function checkKeys(value, allowedKeys, path2, diagnostics) {
 }
 function isSafeRelativePath(value) {
   return !(0, import_node_path3.isAbsolute)(value) && !value.split(/[\\/]+/).includes("..");
+}
+function snapshotWorkspace(root) {
+  const files = /* @__PURE__ */ new Map();
+  for (const entry of (0, import_node_fs3.readdirSync)(root, { withFileTypes: true })) {
+    const path2 = (0, import_node_path3.join)(root, entry.name);
+    if (entry.isDirectory()) {
+      for (const [childPath, hash] of snapshotWorkspace(path2))
+        files.set((0, import_node_path3.join)(entry.name, childPath), hash);
+    } else if (entry.isFile()) {
+      files.set(entry.name, (0, import_node_crypto.createHash)("sha256").update((0, import_node_fs3.readFileSync)(path2)).digest("hex"));
+    } else if ((0, import_node_fs3.lstatSync)(path2).isSymbolicLink()) {
+      files.set(entry.name, "symlink");
+    }
+  }
+  return files;
+}
+function evaluateAssertions(behavior, before, after, exitCode) {
+  const assertions = [{ kind: "exit code", path: "process", passed: exitCode === behavior.expect.exitCode, detail: `Expected ${behavior.expect.exitCode}, received ${exitCode}.` }];
+  for (const path2 of behavior.expect.files.created)
+    assertions.push({ kind: "created", path: path2, passed: !before.has(path2) && after.has(path2), detail: "Expected file to be newly created." });
+  for (const path2 of behavior.expect.files.modified)
+    assertions.push({ kind: "modified", path: path2, passed: before.has(path2) && after.has(path2) && before.get(path2) !== after.get(path2), detail: "Expected file contents to change." });
+  for (const path2 of behavior.expect.files.unchanged)
+    assertions.push({ kind: "unchanged", path: path2, passed: before.has(path2) && after.has(path2) && before.get(path2) === after.get(path2), detail: "Expected file contents to remain unchanged." });
+  return assertions;
 }
 
 // dist/cases.js
@@ -10049,6 +10184,7 @@ Usage:
   skillci policy check <file> [--format markdown|json]
   skillci policy diff <before-file> <after-file> [--format markdown|json|github]
   skillci behavior check <case-file> [--format markdown|json]
+  skillci behavior run <case-file> [--format markdown|json]
 
 Examples:
   skillci init
@@ -10059,6 +10195,7 @@ Examples:
   skillci policy check skillci/policy.yml
   skillci policy diff policy/main.yml skillci/policy.yml
   skillci behavior check examples/behavior/docs-update.behavior.yml
+  skillci behavior run examples/behavior/docs-update.behavior.yml
   skillci report .github/skills/release --output skillci-report.md
 `;
 async function main(argv) {
@@ -10119,19 +10256,27 @@ ${created.map((file) => `  - ${file}`).join("\n")}`);
   }
   if (command === "behavior") {
     const [subcommand, ...behaviorArgs] = args;
-    if (subcommand !== "check")
-      throw new Error("behavior supports the check subcommand.");
     const casePath = positionalArgs(behaviorArgs)[0];
     if (!casePath)
-      throw new Error("behavior check requires a case file.");
+      throw new Error(`behavior ${subcommand ?? ""} requires a case file.`.trim());
     const format2 = option(behaviorArgs, "--format") ?? "markdown";
     if (format2 !== "markdown" && format2 !== "json")
       throw new Error(`Unsupported behavior format: ${format2}`);
-    const validation = validateBehaviorCase(casePath);
-    console.log(format2 === "json" ? JSON.stringify(validation, null, 2) : renderBehaviorValidation(validation));
-    if (!validation.valid)
-      process.exitCode = 1;
-    return;
+    if (subcommand === "check") {
+      const validation = validateBehaviorCase(casePath);
+      console.log(format2 === "json" ? JSON.stringify(validation, null, 2) : renderBehaviorValidation(validation));
+      if (!validation.valid)
+        process.exitCode = 1;
+      return;
+    }
+    if (subcommand === "run") {
+      const result2 = runBehaviorCase(casePath);
+      console.log(format2 === "json" ? JSON.stringify(result2, null, 2) : renderBehaviorRun(result2));
+      if (!result2.execution?.passed)
+        process.exitCode = 1;
+      return;
+    }
+    throw new Error("behavior supports the check and run subcommands.");
   }
   if (command !== "audit" && command !== "report") {
     throw new Error(`Unknown command: ${command}`);

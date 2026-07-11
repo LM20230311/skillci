@@ -3,7 +3,7 @@
 > 这份文件是 SkillCI 的单一迭代记录。每次开发开始前确认当前阶段；每次合并或发布后更新状态、验收结果、版本和下一步。
 
 **当前阶段：** Phase 3 — 隔离行为测试
-**当前版本：** `v0.2.0`
+**当前版本：** `v0.3.0`（待 CI 验证后发布）
 **最后更新：** 2026-07-11
 
 ## 产品北极星
@@ -126,10 +126,11 @@
 ### 要做什么
 
 - [x] 定义行为测试用例格式：fixture、输入、允许工具、期望文件变更、禁止副作用。
-- [ ] 在临时目录或 Docker 沙箱中运行受控任务。
-- [ ] 记录结构化事件：读取、写入、命令、网络请求、退出码。
-- [ ] 支持文件 diff、命令断言和网络断言。
-- [ ] 将运行结果保存为可在 CI 审阅的报告。
+- [x] 在临时复制 workspace 的 Docker 容器中运行受控任务。
+- [x] 记录退出码与文件 created/modified/deleted 的结构化结果。
+- [x] 支持文件 diff 断言，并以容器网络隔离实现网络拒绝。
+- [x] 将运行结果作为 Markdown/JSON 输出，并在 CI 中执行示例。
+- [ ] 细粒度记录读取、写入、命令和网络请求；支持命令断言。
 
 ### 做到什么程度才算完成
 
@@ -141,7 +142,9 @@
 
 - [x] 新增 `skillci behavior check`，严格校验 YAML 行为案例，但不执行 runner。
 - [x] 定义 fixture、prompt、runner、工具权限、退出码及文件期望的最小契约，并提供文档更新的可复制示例。
-- [x] CI 自动校验行为案例格式，下一步才实现隔离执行。
+- [x] 新增 `skillci behavior run`：复制 fixture 后在 Docker 中运行，强制禁用网络、只读根文件系统、移除能力、禁止提权并限制资源。
+- [x] 对退出码、created/modified/unchanged 文件断言生成可审阅报告；CI 会真实运行文档更新示例。
+- [x] 完成 `v0.3.0` 发布候选：首个可复现的隔离行为 runner，等待远程 CI 后创建 tag 与 GitHub Release。
 
 ## GitHub Marketplace 上架计划
 
@@ -149,8 +152,8 @@
 
 上架前检查：
 
-- [ ] Action 的真实隔离执行用例通过 CI。
-- [ ] `action.yml` 的 Marketplace 名称、描述和品牌信息完成核对。
+- [ ] Action 的真实隔离执行用例通过 CI（等待 `v0.3.0` 提交的远程 CI）。
+- [x] 已核对 `action.yml` 的 Marketplace 名称、描述和品牌信息。
 - [ ] 账户已接受 GitHub Marketplace Developer Agreement 并启用 2FA。
 - [ ] 以新的语义化 Release 在 GitHub UI 勾选 “Publish this Action to the GitHub Marketplace”。
 

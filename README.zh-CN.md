@@ -180,7 +180,7 @@ SkillCI 会将新增限制与**权限扩大**分开显示。新增 `allow.networ
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.2.0
+- uses: LM20230311/skillci@v0.3.0
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-- uses: LM20230311/skillci@v0.2.0
+      - uses: LM20230311/skillci@v0.3.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
@@ -260,9 +260,9 @@ node dist/index.js test skillci/cases
 - Failed: 0
 ```
 
-## 先定义行为测试，再运行 Agent
+## 在受限工作区中运行 Agent 行为测试
 
-Phase 3 从严格的行为测试契约开始。它记录 fixture、任务输入、声明的 runner、允许和禁止的工具、预期退出码与文件变更，但**不会**在你的机器上执行不可信 runner。
+Phase 3 使用严格的行为测试契约。它记录 fixture、任务输入、声明的 runner、允许和禁止的工具、预期退出码与文件变更。`skillci behavior check` 只校验契约；`skillci behavior run` 会在 Docker 中运行它。
 
 ```yaml
 name: documentation-update-stays-within-fixture
@@ -270,7 +270,8 @@ fixture: fixtures/docs
 input:
   prompt: Update the documentation landing page for the current release.
 runner:
-  command: future-agent-runner --skill ../docs-skill
+  image: node:22-alpine
+  command: node runner.mjs
   timeoutSeconds: 60
 tools:
   allow:
@@ -294,7 +295,15 @@ expect:
 skillci behavior check examples/behavior/docs-update.behavior.yml
 ```
 
-这有意只是契约校验器，还不是执行引擎。Phase 3 的下一步只会在明确隔离的工作区中运行这些案例。
+随后运行 fixture：
+
+```bash
+skillci behavior run examples/behavior/docs-update.behavior.yml
+```
+
+当前 runner 要求 `tools.deny` 必须包含 `network`。SkillCI 会先把 fixture 复制到临时工作区，再以 Docker 启动：`--network none`、只读容器文件系统、仅挂载该复制工作区的可写目录、移除 Linux capabilities、启用 `no-new-privileges`，并限制 CPU/内存/进程数。之后它会核对退出码以及新增、修改或未变化的文件。需要先安装 Docker，并确保命令可用。
+
+这是刻意保持狭窄的执行边界，并不声称是完整沙箱；运行不可信工作负载时，仍应使用最小权限凭据和专用 CI runner。
 
 ## CLI 参考
 
@@ -319,6 +328,9 @@ skillci policy diff <before-file> <after-file> [--format markdown|json|github]
 
 # 验证行为测试契约，不执行其 runner。
 skillci behavior check <case-file> [--format markdown|json]
+
+# 在受限 Docker runner 中运行行为案例。
+skillci behavior run <case-file> [--format markdown|json]
 ```
 
 ## 为什么要做这个项目
@@ -345,12 +357,12 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 - [x] 必须填写理由、且仍会在报告中展示的内联抑制机制
 - [x] 区分权限扩大与新增限制的策略 diff
 - [x] 对 fixture、输入、工具、退出码和文件预期进行行为测试契约校验
+- [x] Docker 行为 runner：复制 fixture 工作区、拒绝网络、文件断言与 CI 覆盖
 - [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
 - [x] Composite GitHub Action
 
 ### 下一步
 
-- [ ] 在隔离沙箱中运行基于 fixture 的行为测试
 - [ ] 适配 Codex、Claude Code、Cursor 与 GitHub Copilot 的约定
 - [ ] 建立公开的危险与失效 Skill 样本库
 - [ ] SARIF 上传与更丰富的 PR 摘要

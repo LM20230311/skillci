@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { writeFileSync } from "node:fs";
 import { audit } from "./audit.js";
-import { renderBehaviorValidation, validateBehaviorCase } from "./behavior.js";
+import { renderBehaviorRun, renderBehaviorValidation, runBehaviorCase, validateBehaviorCase } from "./behavior.js";
 import { renderTestRun, runCases } from "./cases.js";
 import { initialize } from "./init.js";
 import { diffPolicies, renderPolicyDiff, renderPolicyDiffGitHub, renderPolicyValidation, validatePolicy } from "./policy.js";
@@ -18,6 +18,7 @@ Usage:
   skillci policy check <file> [--format markdown|json]
   skillci policy diff <before-file> <after-file> [--format markdown|json|github]
   skillci behavior check <case-file> [--format markdown|json]
+  skillci behavior run <case-file> [--format markdown|json]
 
 Examples:
   skillci init
@@ -28,6 +29,7 @@ Examples:
   skillci policy check skillci/policy.yml
   skillci policy diff policy/main.yml skillci/policy.yml
   skillci behavior check examples/behavior/docs-update.behavior.yml
+  skillci behavior run examples/behavior/docs-update.behavior.yml
   skillci report .github/skills/release --output skillci-report.md
 `;
 
@@ -82,15 +84,23 @@ async function main(argv: string[]): Promise<void> {
 
   if (command === "behavior") {
     const [subcommand, ...behaviorArgs] = args;
-    if (subcommand !== "check") throw new Error("behavior supports the check subcommand.");
     const casePath = positionalArgs(behaviorArgs)[0];
-    if (!casePath) throw new Error("behavior check requires a case file.");
+    if (!casePath) throw new Error(`behavior ${subcommand ?? ""} requires a case file.`.trim());
     const format = option(behaviorArgs, "--format") ?? "markdown";
     if (format !== "markdown" && format !== "json") throw new Error(`Unsupported behavior format: ${format}`);
-    const validation = validateBehaviorCase(casePath);
-    console.log(format === "json" ? JSON.stringify(validation, null, 2) : renderBehaviorValidation(validation));
-    if (!validation.valid) process.exitCode = 1;
-    return;
+    if (subcommand === "check") {
+      const validation = validateBehaviorCase(casePath);
+      console.log(format === "json" ? JSON.stringify(validation, null, 2) : renderBehaviorValidation(validation));
+      if (!validation.valid) process.exitCode = 1;
+      return;
+    }
+    if (subcommand === "run") {
+      const result = runBehaviorCase(casePath);
+      console.log(format === "json" ? JSON.stringify(result, null, 2) : renderBehaviorRun(result));
+      if (!result.execution?.passed) process.exitCode = 1;
+      return;
+    }
+    throw new Error("behavior supports the check and run subcommands.");
   }
 
   if (command !== "audit" && command !== "report") {
