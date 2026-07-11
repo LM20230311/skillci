@@ -3,7 +3,7 @@
 > 这份文件是 SkillCI 的单一迭代记录。每次开发开始前确认当前阶段；每次合并或发布后更新状态、验收结果、版本和下一步。
 
 **当前阶段：** Phase 3 — 隔离行为测试
-**当前版本：** `v0.3.0`
+**当前版本：** `v0.3.1`（Marketplace 元数据修复后待发布）
 **最后更新：** 2026-07-11
 
 ## 产品北极星
@@ -86,6 +86,7 @@
 | 2026-07-11 | `v0.1.0` | 首次公开发布：静态审计、策略、回归案例与 GitHub Action。 |
 | 2026-07-11 | `v0.2.0` | Phase 2 发布：glob、网络主机 allowlist、命令与工作目录策略、可审查抑制和策略 diff。 |
 | 2026-07-11 | `v0.3.0` | Phase 3 发布：受限 Docker 行为 runner、文件断言与 CI 真实执行示例。 |
+| 2026-07-11 | `v0.3.1` | 待发布：修复 Marketplace Action 名称唯一性校验。 |
 
 ---
 
@@ -149,14 +150,14 @@
 
 ## GitHub Marketplace 上架计划
 
-**目标版本：** `v0.3.0`，即首个隔离行为 runner 完成并有可复现示例后。
+**目标版本：** `v0.3.1`，修复 Marketplace Action 名称唯一性校验后发布。
 
 上架前检查：
 
 - [x] Action 的真实隔离执行用例已通过 CI（[run 29148660933](https://github.com/LM20230311/skillci/actions/runs/29148660933)）。
-- [x] 已核对 `action.yml` 的 Marketplace 名称、描述和品牌信息。
-- [ ] 账户已接受 GitHub Marketplace Developer Agreement 并启用 2FA。
-- [ ] 以新的语义化 Release 在 GitHub UI 勾选 “Publish this Action to the GitHub Marketplace”。
+- [x] 已核对 `action.yml` 的 Marketplace 名称、描述和品牌信息；名称改为唯一的 `SkillCI Audit`。
+- [x] 账户已接受 GitHub Marketplace Developer Agreement（GitHub 页面确认）。
+- [ ] 创建 `v0.3.1` Release，并在 GitHub UI 勾选 “Publish this Action to the GitHub Marketplace”。
 
 ---
 

@@ -180,7 +180,7 @@ The GitHub Action can annotate those expansions when the workflow checks out the
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.3.0
+- uses: LM20230311/skillci@v0.3.1
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -223,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.3.0
+      - uses: LM20230311/skillci@v0.3.1
         with:
           path: .github/skills
           policy: skillci/policy.yml

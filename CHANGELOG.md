@@ -2,6 +2,12 @@
 
 All notable changes to SkillCI are recorded in this file.
 
+## [0.3.1] - 2026-07-11
+
+### Fixed
+
+- Renamed the GitHub Action metadata to `SkillCI Audit` so the Marketplace listing has a unique Action name.
+
 ## [0.3.0] - 2026-07-11
 
 ### Added

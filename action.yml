@@ -1,4 +1,4 @@
-name: SkillCI
+name: SkillCI Audit
 description: Audit AI agent skills, enforce policies, and flag risky changes in CI.
 author: SkillCI contributors
 branding:
