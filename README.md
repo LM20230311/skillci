@@ -17,6 +17,8 @@ Agent Skills can read files, run commands, call APIs, and change repositories. S
 
 It is designed for Skills used with Codex, Claude Code, Cursor, GitHub Copilot, Gemini CLI, and other instruction-driven agents.
 
+**Planning and iteration:** see [the project plan](docs/PROJECT_PLAN.md).
+
 ```text
 Before SkillCI:    "This Skill looks useful. Ship it?"
 With SkillCI:     "This PR adds network access, reads .env, and force-pushes main. Block it."
@@ -120,7 +122,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0
+      - uses: LM20230311/skillci@v0.1.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
