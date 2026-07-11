@@ -3,7 +3,7 @@
 > 这份文件是 SkillCI 的单一迭代记录。每次开发开始前确认当前阶段；每次合并或发布后更新状态、验收结果、版本和下一步。
 
 **当前阶段：** Phase 4 — Agent 宿主适配
-**当前版本：** `v0.3.2`
+**当前版本：** `v0.4.1`
 **最后更新：** 2026-07-11
 
 ## 产品北极星
@@ -88,6 +88,7 @@
 | 2026-07-11 | `v0.3.0` | Phase 3 发布：受限 Docker 行为 runner、文件断言与 CI 真实执行示例。 |
 | 2026-07-11 | `v0.3.1` | Marketplace 元数据修复并正式上架：Action 展示名为唯一的 `SkillCI Audit`。 |
 | 2026-07-11 | `v0.3.2` | 首个 npm CLI 分发：`skillci@0.3.2` 已作为 `latest` 公开发布并完成独立安装验证。 |
+| 2026-07-11 | `v0.4.1` | Phase 3 完成：严格断言 Node runner 的命令、读写与网络 API 尝试；[GitHub Release](https://github.com/LM20230311/skillci/releases/tag/v0.4.1) 与 [npm 包](https://www.npmjs.com/package/skillci/v/0.4.1) 均已公开验证。 |
 
 ---
 
@@ -171,6 +172,7 @@
 - [x] 创建 [v0.3.2 GitHub Release](https://github.com/LM20230311/skillci/releases/tag/v0.3.2)。
 - [x] 发布 `skillci@0.3.2` 到 npm 的 `latest` tag，并通过 `npm exec --yes --package=skillci@0.3.2 -- skillci --help` 完成独立安装验证。
 - [x] 已配置 npm Trusted Publishing：npm 已核验绑定 `LM20230311/skillci` 的 `publish-npm.yml`，权限仅限 `npm publish`；下一个新版本将验证 GitHub Release 自动发布与 provenance。
+- [x] `v0.4.1` 已验证双渠道自动发布：GitHub Release 触发 OIDC npm publish，[workflow 29151177175](https://github.com/LM20230311/skillci/actions/runs/29151177175) 成功；`skillci@0.4.1` 已作为 `latest` 公开安装验证。
 
 ---
 
