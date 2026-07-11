@@ -227,6 +227,7 @@
 - [x] 通过仓库根目录 `AGENTS.md` 约束后续 AI 与贡献者：功能变更必须同步更新所有 README 语言版本、计划和发布记录。
 - [x] 每次 README 更新都必须检查双语命令、规则 ID、链接、支持范围、路线图与安全说明的一致性。
 - [x] 两份 README 首屏均明确目标用户、风险严重性，以及 SkillCI 在合并或安装前提供的决策价值。
+- [x] `AGENTS.md` 规定 GitHub Marketplace/GitHub Release 与 npm 的双渠道同版本发布、公开验证、首次配置边界与后续 2FA 处理方式。
 
 ## 决策原则
 

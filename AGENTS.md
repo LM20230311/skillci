@@ -55,5 +55,28 @@ For documentation-only changes, verify links, Markdown fences, language navigati
 2. Synchronize both README files and finalize `CHANGELOG.md`.
 3. Run the full verification checklist and ensure GitHub Actions CI passes on `main`.
 4. Create an annotated release tag and GitHub Release.
-5. Update README Action examples to an exact immutable release tag such as `LM20230311/skillci@v0.1.0`.
-6. Record the release in the project plan and move the next phase forward.
+5. Publish the matching version to npm with `npm publish --access public`.
+6. Verify the public package with `npm view skillci@<version>` and `npm exec --yes --package=skillci@<version> -- skillci --help` from outside the repository.
+7. Update README Action examples to the exact immutable release tag, such as `LM20230311/skillci@v0.1.0`, and update `npx skillci@<version>` examples to the same semantic version.
+8. Record both distribution results in the project plan and move the next phase forward.
+
+## Dual distribution: GitHub Marketplace and npm
+
+Every stable SkillCI release is a **dual release**. Do not publish only one channel unless the user explicitly asks for an exception:
+
+- **GitHub:** an annotated `vX.Y.Z` tag and a GitHub Release. The already-listed [SkillCI Audit Marketplace Action](https://github.com/marketplace/actions/skillci-audit) remains usable at every immutable GitHub tag.
+- **npm:** the matching unscoped package version `skillci@X.Y.Z`, published with the `latest` dist-tag unless the user explicitly requests a prerelease tag.
+
+Required order for a normal release:
+
+1. Bump `package.json` and `package-lock.json` to the next semantic version.
+2. Synchronize English and Chinese README commands, exact Action tag, npm/npx examples, and badges; finalize `CHANGELOG.md` and `docs/PROJECT_PLAN.md`.
+3. Run `npm test`, a representative CLI command, `npm pack --dry-run`, and `git diff --check`; build and commit `dist/` when required above.
+4. Commit, push, and wait for CI on `main`.
+5. Create and push the annotated tag, then create the matching GitHub Release.
+6. Run `npm publish --access public`; never republish or retag an existing version.
+7. Validate the live npm package independently, then record the final GitHub Release, Marketplace, and npm links in the plan.
+
+First-time setup was completed on 2026-07-11: GitHub Marketplace Developer Agreement, Marketplace category/metadata, npm package name, npm account 2FA, and the first npm publication. Future releases do **not** require accepting the Marketplace agreement, choosing its category, or resolving the Marketplace name again. npm may still request the account owner's passkey, security key, or authenticator code for each write action; never request that secret in chat or store it in files. Ask the user to complete the browser/device prompt, then resume verification.
+
+Do not create a long-lived npm token with `bypass-2fa` just to simplify a release. If the user later wants hands-off releases, propose npm trusted publishing from GitHub Actions as a separate, explicitly authorized security change.
