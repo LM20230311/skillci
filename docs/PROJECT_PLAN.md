@@ -87,7 +87,7 @@
 | 2026-07-11 | `v0.2.0` | Phase 2 发布：glob、网络主机 allowlist、命令与工作目录策略、可审查抑制和策略 diff。 |
 | 2026-07-11 | `v0.3.0` | Phase 3 发布：受限 Docker 行为 runner、文件断言与 CI 真实执行示例。 |
 | 2026-07-11 | `v0.3.1` | Marketplace 元数据修复并正式上架：Action 展示名为唯一的 `SkillCI Audit`。 |
-| 2026-07-11 | `v0.3.2` | 待发布：首个 npm CLI 分发，补充 npm 安装文档。 |
+| 2026-07-11 | `v0.3.2` | npm 发布候选：首个 CLI 分发，补充 npm 安装文档，远程 CI 已通过。 |
 
 ---
 
@@ -166,7 +166,8 @@
 
 - [x] 验证 `skillci` 包名在 npm registry 中可用。
 - [x] 补充双语 README 的 npm 安装、`npx` 单次运行与 npm badge。
-- [ ] 完成 `v0.3.2` CI、GitHub Release、npm publish 及公开安装验证。
+- [x] `v0.3.2` GitHub Actions CI 已通过（[run 29149090315](https://github.com/LM20230311/skillci/actions/runs/29149090315)）。
+- [ ] 创建 GitHub Release、npm publish 及公开安装验证。
 
 ---
 
