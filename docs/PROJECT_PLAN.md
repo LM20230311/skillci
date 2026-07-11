@@ -86,7 +86,7 @@
 | 2026-07-11 | `v0.1.0` | 首次公开发布：静态审计、策略、回归案例与 GitHub Action。 |
 | 2026-07-11 | `v0.2.0` | Phase 2 发布：glob、网络主机 allowlist、命令与工作目录策略、可审查抑制和策略 diff。 |
 | 2026-07-11 | `v0.3.0` | Phase 3 发布：受限 Docker 行为 runner、文件断言与 CI 真实执行示例。 |
-| 2026-07-11 | `v0.3.1` | Marketplace 元数据修复：将 Action 展示名改为唯一的 `SkillCI Audit`。 |
+| 2026-07-11 | `v0.3.1` | Marketplace 元数据修复并正式上架：Action 展示名为唯一的 `SkillCI Audit`。 |
 
 ---
 
@@ -157,7 +157,7 @@
 - [x] Action 的真实隔离执行用例已通过 CI（[run 29148660933](https://github.com/LM20230311/skillci/actions/runs/29148660933)）。
 - [x] 已核对 `action.yml` 的 Marketplace 名称、描述和品牌信息；名称改为唯一的 `SkillCI Audit`。
 - [x] 账户已接受 GitHub Marketplace Developer Agreement（GitHub 页面确认）。
-- [x] 创建 `v0.3.1` Release（等待在 GitHub UI 完成 Marketplace 发布）。
+- [x] 创建 `v0.3.1` Release，并发布至 GitHub Marketplace：[SkillCI Audit](https://github.com/marketplace/actions/skillci-audit)。
 
 ---
 
