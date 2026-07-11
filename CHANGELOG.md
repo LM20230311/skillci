@@ -2,6 +2,13 @@
 
 All notable changes to SkillCI are recorded in this file.
 
+## [0.4.0] - 2026-07-11
+
+### Added
+
+- Strict Node behavior-trace assertions for commands, file reads, file writes, and network API attempts.
+- A checked-in behavior fixture that proves the tracing preload works in the constrained Docker runner.
+
 ## [0.3.2] - 2026-07-11
 
 ### Added

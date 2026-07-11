@@ -9734,7 +9734,7 @@ function validateBehaviorCase(casePath) {
   }
   const expect = objectValue(raw.expect, "expect", diagnostics);
   if (expect)
-    checkKeys(expect, ["exitCode", "files"], "expect", diagnostics);
+    checkKeys(expect, ["exitCode", "files", "commands", "reads", "writes", "network"], "expect", diagnostics);
   const exitCode = expect ? numberValue(expect.exitCode, "expect.exitCode", diagnostics) : void 0;
   if (exitCode !== void 0 && (!Number.isInteger(exitCode) || exitCode < 0 || exitCode > 255))
     diagnostics.push({ path: "expect.exitCode", message: "Exit code must be an integer between 0 and 255." });
@@ -9751,7 +9751,23 @@ function validateBehaviorCase(casePath) {
   }
   if (created && modified && unchanged && created.length + modified.length + unchanged.length === 0)
     diagnostics.push({ path: "expect.files", message: "Specify at least one expected file assertion." });
-  const behavior = name && fixture && prompt && image && command && timeoutSeconds !== void 0 && allowedTools && deniedTools && exitCode !== void 0 && created && modified && unchanged ? { name, fixture, input: { prompt }, runner: { image, command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged } } } : void 0;
+  const commands = expect ? stringArray(expect.commands, "expect.commands", diagnostics) : void 0;
+  if (commands && commands.length === 0)
+    diagnostics.push({ path: "expect.commands", message: "Specify the declared runner command as an allowed command." });
+  const reads = expect ? stringArray(expect.reads, "expect.reads", diagnostics) : void 0;
+  const writes = expect ? stringArray(expect.writes, "expect.writes", diagnostics) : void 0;
+  for (const [field, values] of [["expect.reads", reads], ["expect.writes", writes]]) {
+    for (const value of values ?? [])
+      if (!isSafeRelativePath(value))
+        diagnostics.push({ path: field, message: `Observed file path must be relative and stay inside the fixture: ${value}` });
+  }
+  const network = expect ? objectValue(expect.network, "expect.network", diagnostics) : void 0;
+  if (network)
+    checkKeys(network, ["requests"], "expect.network", diagnostics);
+  const networkRequests = network ? numberValue(network.requests, "expect.network.requests", diagnostics) : void 0;
+  if (networkRequests !== void 0 && (!Number.isInteger(networkRequests) || networkRequests < 0 || networkRequests > 1e3))
+    diagnostics.push({ path: "expect.network.requests", message: "Network requests must be an integer between 0 and 1000." });
+  const behavior = name && fixture && prompt && image && command && timeoutSeconds !== void 0 && allowedTools && deniedTools && exitCode !== void 0 && created && modified && unchanged && commands && reads && writes && networkRequests !== void 0 ? { name, fixture, input: { prompt }, runner: { image, command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged }, commands, reads, writes, network: { requests: networkRequests } } } : void 0;
   return { path: path2, behavior, diagnostics, valid: diagnostics.length === 0 && behavior !== void 0 };
 }
 function renderBehaviorValidation(result) {
@@ -9783,6 +9799,7 @@ function runBehaviorCase(casePath) {
   try {
     (0, import_node_fs3.cpSync)(sourceFixture, workspace, { recursive: true });
     makeWorkspaceWritable(workspace);
+    prepareNodeTrace(workspace);
     const before = snapshotWorkspace(workspace);
     const process2 = (0, import_node_child_process.spawnSync)("docker", buildDockerArgs(workspace, behavior), {
       encoding: "utf8",
@@ -9798,7 +9815,8 @@ function runBehaviorCase(casePath) {
     const modified = [...after.keys()].filter((path2) => before.has(path2) && before.get(path2) !== after.get(path2)).sort();
     const exitCode = process2.status ?? 124;
     const timedOut = processError?.code === "ETIMEDOUT" || process2.signal === "SIGTERM";
-    const assertions = evaluateAssertions(behavior, before, after, exitCode);
+    const trace = readNodeTrace(workspace, behavior.runner.command);
+    const assertions = evaluateAssertions(behavior, before, after, exitCode, trace);
     return {
       validation,
       execution: {
@@ -9811,6 +9829,11 @@ function runBehaviorCase(casePath) {
         created,
         modified,
         deleted,
+        commands: trace.commands,
+        reads: trace.reads,
+        writes: trace.writes,
+        networkRequests: trace.networkRequests,
+        tracingReady: trace.ready,
         assertions,
         passed: assertions.every((assertion) => assertion.passed) && !timedOut
       }
@@ -9842,13 +9865,17 @@ function buildDockerArgs(workspace, behavior) {
     "512m",
     "--cpus",
     "1",
+    "-e",
+    "NODE_OPTIONS=--require /workspace/.skillci-trace/instrument.cjs",
+    "-e",
+    "SKILLCI_TRACE_FILE=/workspace/.skillci-trace/events.jsonl",
     "-v",
     `${workspace}:/workspace:rw`,
     "-w",
     "/workspace",
     behavior.runner.image,
     "sh",
-    "-lc",
+    "-c",
     behavior.runner.command
   ];
 }
@@ -9864,6 +9891,7 @@ function renderBehaviorRun(result) {
     `- **Isolation:** Docker, network disabled, temporary fixture workspace`,
     `- **Exit code:** ${execution.exitCode}${execution.timedOut ? " (timed out)" : ""}`,
     `- **Files:** ${execution.created.length} created, ${execution.modified.length} modified, ${execution.deleted.length} deleted`,
+    `- **Observed:** ${execution.commands.length} commands, ${execution.reads.length} reads, ${execution.writes.length} writes, ${execution.networkRequests} network API attempts`,
     "",
     "## Assertions",
     "",
@@ -9923,6 +9951,8 @@ function isSafeRelativePath(value) {
 function snapshotWorkspace(root) {
   const files = /* @__PURE__ */ new Map();
   for (const entry of (0, import_node_fs3.readdirSync)(root, { withFileTypes: true })) {
+    if (entry.name === ".skillci-trace")
+      continue;
     const path2 = (0, import_node_path3.join)(root, entry.name);
     if (entry.isDirectory()) {
       for (const [childPath, hash] of snapshotWorkspace(path2))
@@ -9945,7 +9975,7 @@ function makeWorkspaceWritable(root) {
       (0, import_node_fs3.chmodSync)(path2, 438);
   }
 }
-function evaluateAssertions(behavior, before, after, exitCode) {
+function evaluateAssertions(behavior, before, after, exitCode, trace) {
   const assertions = [{ kind: "exit code", path: "process", passed: exitCode === behavior.expect.exitCode, detail: `Expected ${behavior.expect.exitCode}, received ${exitCode}.` }];
   for (const path2 of behavior.expect.files.created)
     assertions.push({ kind: "created", path: path2, passed: !before.has(path2) && after.has(path2), detail: "Expected file to be newly created." });
@@ -9953,8 +9983,111 @@ function evaluateAssertions(behavior, before, after, exitCode) {
     assertions.push({ kind: "modified", path: path2, passed: before.has(path2) && after.has(path2) && before.get(path2) !== after.get(path2), detail: "Expected file contents to change." });
   for (const path2 of behavior.expect.files.unchanged)
     assertions.push({ kind: "unchanged", path: path2, passed: before.has(path2) && after.has(path2) && before.get(path2) === after.get(path2), detail: "Expected file contents to remain unchanged." });
+  assertions.push({ kind: "instrumentation", path: "Node runner", passed: trace.ready, detail: trace.ready ? "Node tracing preload reported ready." : "Node tracing preload did not report ready." });
+  assertions.push(...eventAssertions("command", behavior.expect.commands.map(redactTraceValue), trace.commands));
+  assertions.push(...eventAssertions("read", behavior.expect.reads, trace.reads));
+  assertions.push(...eventAssertions("write", behavior.expect.writes, trace.writes));
+  assertions.push({ kind: "network requests", path: "network", passed: trace.networkRequests === behavior.expect.network.requests, detail: `Expected ${behavior.expect.network.requests}, observed ${trace.networkRequests} network API attempts.` });
   return assertions;
 }
+function eventAssertions(kind, expected, observed) {
+  const assertions = [];
+  for (const value of expected)
+    assertions.push({ kind, path: value, passed: observed.includes(value), detail: observed.includes(value) ? "Observed as expected." : "Expected observation was not recorded." });
+  for (const value of observed.filter((item) => !expected.includes(item)))
+    assertions.push({ kind, path: value, passed: false, detail: "Observed value is not allowed by this behavior case." });
+  return assertions;
+}
+function prepareNodeTrace(workspace) {
+  const traceDirectory = (0, import_node_path3.join)(workspace, ".skillci-trace");
+  (0, import_node_fs3.mkdirSync)(traceDirectory, { recursive: true });
+  const preloadPath = (0, import_node_path3.join)(traceDirectory, "instrument.cjs");
+  const eventsPath = (0, import_node_path3.join)(traceDirectory, "events.jsonl");
+  (0, import_node_fs3.writeFileSync)(preloadPath, NODE_TRACE_PRELOAD, "utf8");
+  (0, import_node_fs3.writeFileSync)(eventsPath, "", "utf8");
+  (0, import_node_fs3.chmodSync)(traceDirectory, 511);
+  (0, import_node_fs3.chmodSync)(preloadPath, 420);
+  (0, import_node_fs3.chmodSync)(eventsPath, 438);
+}
+function readNodeTrace(workspace, runnerCommand) {
+  const tracePath = (0, import_node_path3.join)(workspace, ".skillci-trace", "events.jsonl");
+  const events = (0, import_node_fs3.existsSync)(tracePath) ? (0, import_node_fs3.readFileSync)(tracePath, "utf8").split("\n").flatMap((line) => {
+    if (!line.trim())
+      return [];
+    try {
+      const event = JSON.parse(line);
+      return [event];
+    } catch {
+      return [];
+    }
+  }) : [];
+  const values = (kind) => [...new Set(events.filter((event) => event.kind === kind).map((event) => event.value).filter((value) => typeof value === "string").map(normalizeTraceValue).filter((value) => value !== void 0))];
+  return {
+    ready: events.some((event) => event.kind === "ready"),
+    commands: [...new Set([runnerCommand, ...values("command")].map(redactTraceValue))],
+    reads: values("read"),
+    writes: values("write"),
+    networkRequests: events.filter((event) => event.kind === "network").length
+  };
+}
+function normalizeTraceValue(value) {
+  const normalized = value.replaceAll("\\\\", "/");
+  if (normalized === "/workspace")
+    return ".";
+  if (normalized.startsWith("/workspace/"))
+    return normalized.slice("/workspace/".length);
+  return isSafeRelativePath(normalized) ? normalized : void 0;
+}
+function redactTraceValue(value) {
+  return value.replace(/((?:api[_-]?key|authorization|password|secret|token)\\s*(?:=|:))\\s*[^\\s]+/gi, "$1 [REDACTED]");
+}
+var NODE_TRACE_PRELOAD = String.raw`"use strict";
+const fs = require("node:fs");
+const fsp = require("node:fs/promises");
+const child = require("node:child_process");
+const output = process.env.SKILLCI_TRACE_FILE;
+const open = fs.openSync.bind(fs);
+const write = fs.writeSync.bind(fs);
+const close = fs.closeSync.bind(fs);
+function valueOf(value) {
+  if (value && typeof value === "object" && "pathname" in value) return value.pathname;
+  return typeof value === "string" ? value : Buffer.isBuffer(value) ? value.toString() : String(value);
+}
+function emit(kind, value) {
+  try {
+    const descriptor = open(output, "a");
+    try { write(descriptor, JSON.stringify({ kind, value }) + "\n", undefined, "utf8"); }
+    finally { close(descriptor); }
+  } catch { }
+}
+function wrap(object, name, kind) {
+  const original = object[name];
+  if (typeof original !== "function") return;
+  object[name] = function (...args) { emit(kind, valueOf(args[0])); return original.apply(this, args); };
+}
+for (const name of ["readFile", "readFileSync", "createReadStream", "readdir", "readdirSync", "stat", "statSync", "lstat", "lstatSync", "access", "accessSync", "realpath", "realpathSync"]) { wrap(fs, name, "read"); wrap(fsp, name, "read"); }
+for (const name of ["writeFile", "writeFileSync", "appendFile", "appendFileSync", "createWriteStream", "mkdir", "mkdirSync", "rm", "rmSync", "unlink", "unlinkSync", "rename", "renameSync", "truncate", "truncateSync", "chmod", "chmodSync", "copyFile", "copyFileSync"]) { wrap(fs, name, "write"); wrap(fsp, name, "write"); }
+function commandOf(command, args) { return [valueOf(command), ...(Array.isArray(args) ? args.map(valueOf) : [])].join(" "); }
+for (const name of ["exec", "execSync", "spawn", "spawnSync", "execFile", "execFileSync", "fork"]) {
+  const original = child[name];
+  if (typeof original !== "function") continue;
+  child[name] = function (...args) { emit("command", name === "fork" ? "node " + valueOf(args[0]) : commandOf(args[0], args[1])); return original.apply(this, args); };
+}
+function wrapNetwork(object, name) {
+  const original = object && object[name];
+  if (typeof original !== "function") return;
+  object[name] = function (...args) { emit("network", name); return original.apply(this, args); };
+}
+for (const moduleName of ["node:http", "node:https", "node:net", "node:tls", "node:dgram"]) {
+  const module = require(moduleName);
+  for (const name of ["request", "get", "connect", "createConnection", "createSocket"]) wrapNetwork(module, name);
+}
+if (typeof globalThis.fetch === "function") {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = function (...args) { emit("network", "fetch"); return originalFetch.apply(this, args); };
+}
+emit("ready");
+`;
 
 // dist/cases.js
 var import_node_fs4 = require("node:fs");

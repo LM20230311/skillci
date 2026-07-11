@@ -10,6 +10,9 @@ test("validates the published behavior case contract", () => {
   assert.equal(result.valid, true);
   assert.equal(result.behavior?.tools.deny.includes("network"), true);
   assert.equal(result.behavior?.expect.files.unchanged.includes(".env"), true);
+  assert.deepEqual(result.behavior?.expect.commands, ["node runner.mjs", "node -e process.exit(0)"]);
+  assert.deepEqual(result.behavior?.expect.reads, ["docs/README.md", "runner.mjs"]);
+  assert.deepEqual(result.behavior?.expect.writes, ["docs/README.md"]);
 });
 
 test("rejects unsafe paths and contradictory tool permissions", () => {
@@ -23,6 +26,7 @@ test("rejects unsafe paths and contradictory tool permissions", () => {
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === "fixture"), true);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.message.includes("both allowed and denied")), true);
     assert.equal(result.diagnostics.some((diagnostic) => diagnostic.message.includes("at least one expected file")), true);
+    assert.equal(result.diagnostics.some((diagnostic) => diagnostic.path === "expect.commands"), true);
   } finally {
     rmSync(root, { recursive: true, force: true });
   }
@@ -35,4 +39,5 @@ test("builds a Docker runner with network and privilege restrictions", () => {
   assert.deepEqual(args.slice(0, 8), ["run", "--rm", "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m", "--cap-drop"]);
   assert.equal(args.includes("no-new-privileges"), true);
   assert.equal(args.includes("node:22-alpine"), true);
+  assert.equal(args.includes("NODE_OPTIONS=--require /workspace/.skillci-trace/instrument.cjs"), true);
 });

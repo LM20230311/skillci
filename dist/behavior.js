@@ -1,4 +1,4 @@
-import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, rmdirSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, rmdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -55,7 +55,7 @@ export function validateBehaviorCase(casePath) {
     }
     const expect = objectValue(raw.expect, "expect", diagnostics);
     if (expect)
-        checkKeys(expect, ["exitCode", "files"], "expect", diagnostics);
+        checkKeys(expect, ["exitCode", "files", "commands", "reads", "writes", "network"], "expect", diagnostics);
     const exitCode = expect ? numberValue(expect.exitCode, "expect.exitCode", diagnostics) : undefined;
     if (exitCode !== undefined && (!Number.isInteger(exitCode) || exitCode < 0 || exitCode > 255))
         diagnostics.push({ path: "expect.exitCode", message: "Exit code must be an integer between 0 and 255." });
@@ -72,8 +72,24 @@ export function validateBehaviorCase(casePath) {
     }
     if (created && modified && unchanged && created.length + modified.length + unchanged.length === 0)
         diagnostics.push({ path: "expect.files", message: "Specify at least one expected file assertion." });
-    const behavior = name && fixture && prompt && image && command && timeoutSeconds !== undefined && allowedTools && deniedTools && exitCode !== undefined && created && modified && unchanged
-        ? { name, fixture, input: { prompt }, runner: { image, command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged } } }
+    const commands = expect ? stringArray(expect.commands, "expect.commands", diagnostics) : undefined;
+    if (commands && commands.length === 0)
+        diagnostics.push({ path: "expect.commands", message: "Specify the declared runner command as an allowed command." });
+    const reads = expect ? stringArray(expect.reads, "expect.reads", diagnostics) : undefined;
+    const writes = expect ? stringArray(expect.writes, "expect.writes", diagnostics) : undefined;
+    for (const [field, values] of [["expect.reads", reads], ["expect.writes", writes]]) {
+        for (const value of values ?? [])
+            if (!isSafeRelativePath(value))
+                diagnostics.push({ path: field, message: `Observed file path must be relative and stay inside the fixture: ${value}` });
+    }
+    const network = expect ? objectValue(expect.network, "expect.network", diagnostics) : undefined;
+    if (network)
+        checkKeys(network, ["requests"], "expect.network", diagnostics);
+    const networkRequests = network ? numberValue(network.requests, "expect.network.requests", diagnostics) : undefined;
+    if (networkRequests !== undefined && (!Number.isInteger(networkRequests) || networkRequests < 0 || networkRequests > 1000))
+        diagnostics.push({ path: "expect.network.requests", message: "Network requests must be an integer between 0 and 1000." });
+    const behavior = name && fixture && prompt && image && command && timeoutSeconds !== undefined && allowedTools && deniedTools && exitCode !== undefined && created && modified && unchanged && commands && reads && writes && networkRequests !== undefined
+        ? { name, fixture, input: { prompt }, runner: { image, command, timeoutSeconds }, tools: { allow: allowedTools, deny: deniedTools }, expect: { exitCode, files: { created, modified, unchanged }, commands, reads, writes, network: { requests: networkRequests } } }
         : undefined;
     return { path, behavior, diagnostics, valid: diagnostics.length === 0 && behavior !== undefined };
 }
@@ -105,6 +121,7 @@ export function runBehaviorCase(casePath) {
     try {
         cpSync(sourceFixture, workspace, { recursive: true });
         makeWorkspaceWritable(workspace);
+        prepareNodeTrace(workspace);
         const before = snapshotWorkspace(workspace);
         const process = spawnSync("docker", buildDockerArgs(workspace, behavior), {
             encoding: "utf8",
@@ -120,7 +137,8 @@ export function runBehaviorCase(casePath) {
         const modified = [...after.keys()].filter((path) => before.has(path) && before.get(path) !== after.get(path)).sort();
         const exitCode = process.status ?? 124;
         const timedOut = processError?.code === "ETIMEDOUT" || process.signal === "SIGTERM";
-        const assertions = evaluateAssertions(behavior, before, after, exitCode);
+        const trace = readNodeTrace(workspace, behavior.runner.command);
+        const assertions = evaluateAssertions(behavior, before, after, exitCode, trace);
         return {
             validation,
             execution: {
@@ -133,6 +151,11 @@ export function runBehaviorCase(casePath) {
                 created,
                 modified,
                 deleted,
+                commands: trace.commands,
+                reads: trace.reads,
+                writes: trace.writes,
+                networkRequests: trace.networkRequests,
+                tracingReady: trace.ready,
                 assertions,
                 passed: assertions.every((assertion) => assertion.passed) && !timedOut
             }
@@ -152,7 +175,8 @@ export function buildDockerArgs(workspace, behavior) {
     return [
         "run", "--rm", "--network", "none", "--read-only", "--tmpfs", "/tmp:rw,noexec,nosuid,size=64m",
         "--cap-drop", "ALL", "--security-opt", "no-new-privileges", "--pids-limit", "256", "--memory", "512m", "--cpus", "1",
-        "-v", `${workspace}:/workspace:rw`, "-w", "/workspace", behavior.runner.image, "sh", "-lc", behavior.runner.command
+        "-e", "NODE_OPTIONS=--require /workspace/.skillci-trace/instrument.cjs", "-e", "SKILLCI_TRACE_FILE=/workspace/.skillci-trace/events.jsonl",
+        "-v", `${workspace}:/workspace:rw`, "-w", "/workspace", behavior.runner.image, "sh", "-c", behavior.runner.command
     ];
 }
 export function renderBehaviorRun(result) {
@@ -167,6 +191,7 @@ export function renderBehaviorRun(result) {
         `- **Isolation:** Docker, network disabled, temporary fixture workspace`,
         `- **Exit code:** ${execution.exitCode}${execution.timedOut ? " (timed out)" : ""}`,
         `- **Files:** ${execution.created.length} created, ${execution.modified.length} modified, ${execution.deleted.length} deleted`,
+        `- **Observed:** ${execution.commands.length} commands, ${execution.reads.length} reads, ${execution.writes.length} writes, ${execution.networkRequests} network API attempts`,
         "",
         "## Assertions",
         "",
@@ -225,6 +250,8 @@ function isSafeRelativePath(value) {
 function snapshotWorkspace(root) {
     const files = new Map();
     for (const entry of readdirSync(root, { withFileTypes: true })) {
+        if (entry.name === ".skillci-trace")
+            continue;
         const path = join(root, entry.name);
         if (entry.isDirectory()) {
             for (const [childPath, hash] of snapshotWorkspace(path))
@@ -249,7 +276,7 @@ function makeWorkspaceWritable(root) {
             chmodSync(path, 0o666);
     }
 }
-function evaluateAssertions(behavior, before, after, exitCode) {
+function evaluateAssertions(behavior, before, after, exitCode, trace) {
     const assertions = [{ kind: "exit code", path: "process", passed: exitCode === behavior.expect.exitCode, detail: `Expected ${behavior.expect.exitCode}, received ${exitCode}.` }];
     for (const path of behavior.expect.files.created)
         assertions.push({ kind: "created", path, passed: !before.has(path) && after.has(path), detail: "Expected file to be newly created." });
@@ -257,6 +284,115 @@ function evaluateAssertions(behavior, before, after, exitCode) {
         assertions.push({ kind: "modified", path, passed: before.has(path) && after.has(path) && before.get(path) !== after.get(path), detail: "Expected file contents to change." });
     for (const path of behavior.expect.files.unchanged)
         assertions.push({ kind: "unchanged", path, passed: before.has(path) && after.has(path) && before.get(path) === after.get(path), detail: "Expected file contents to remain unchanged." });
+    assertions.push({ kind: "instrumentation", path: "Node runner", passed: trace.ready, detail: trace.ready ? "Node tracing preload reported ready." : "Node tracing preload did not report ready." });
+    assertions.push(...eventAssertions("command", behavior.expect.commands.map(redactTraceValue), trace.commands));
+    assertions.push(...eventAssertions("read", behavior.expect.reads, trace.reads));
+    assertions.push(...eventAssertions("write", behavior.expect.writes, trace.writes));
+    assertions.push({ kind: "network requests", path: "network", passed: trace.networkRequests === behavior.expect.network.requests, detail: `Expected ${behavior.expect.network.requests}, observed ${trace.networkRequests} network API attempts.` });
     return assertions;
 }
+function eventAssertions(kind, expected, observed) {
+    const assertions = [];
+    for (const value of expected)
+        assertions.push({ kind, path: value, passed: observed.includes(value), detail: observed.includes(value) ? "Observed as expected." : "Expected observation was not recorded." });
+    for (const value of observed.filter((item) => !expected.includes(item)))
+        assertions.push({ kind, path: value, passed: false, detail: "Observed value is not allowed by this behavior case." });
+    return assertions;
+}
+function prepareNodeTrace(workspace) {
+    const traceDirectory = join(workspace, ".skillci-trace");
+    mkdirSync(traceDirectory, { recursive: true });
+    const preloadPath = join(traceDirectory, "instrument.cjs");
+    const eventsPath = join(traceDirectory, "events.jsonl");
+    writeFileSync(preloadPath, NODE_TRACE_PRELOAD, "utf8");
+    writeFileSync(eventsPath, "", "utf8");
+    // The official Node images may execute as an unprivileged `node` user while
+    // the copied workspace is owned by the host user. The trace is contained in
+    // that disposable workspace, so make only this internal directory writable.
+    chmodSync(traceDirectory, 0o777);
+    chmodSync(preloadPath, 0o644);
+    chmodSync(eventsPath, 0o666);
+}
+function readNodeTrace(workspace, runnerCommand) {
+    const tracePath = join(workspace, ".skillci-trace", "events.jsonl");
+    const events = existsSync(tracePath)
+        ? readFileSync(tracePath, "utf8").split("\n").flatMap((line) => {
+            if (!line.trim())
+                return [];
+            try {
+                const event = JSON.parse(line);
+                return [event];
+            }
+            catch {
+                return [];
+            }
+        })
+        : [];
+    const values = (kind) => [...new Set(events.filter((event) => event.kind === kind).map((event) => event.value).filter((value) => typeof value === "string").map(normalizeTraceValue).filter((value) => value !== undefined))];
+    return {
+        ready: events.some((event) => event.kind === "ready"),
+        commands: [...new Set([runnerCommand, ...values("command")].map(redactTraceValue))],
+        reads: values("read"),
+        writes: values("write"),
+        networkRequests: events.filter((event) => event.kind === "network").length
+    };
+}
+function normalizeTraceValue(value) {
+    const normalized = value.replaceAll("\\\\", "/");
+    if (normalized === "/workspace")
+        return ".";
+    if (normalized.startsWith("/workspace/"))
+        return normalized.slice("/workspace/".length);
+    return isSafeRelativePath(normalized) ? normalized : undefined;
+}
+function redactTraceValue(value) {
+    return value.replace(/((?:api[_-]?key|authorization|password|secret|token)\\s*(?:=|:))\\s*[^\\s]+/gi, "$1 [REDACTED]");
+}
+const NODE_TRACE_PRELOAD = String.raw `"use strict";
+const fs = require("node:fs");
+const fsp = require("node:fs/promises");
+const child = require("node:child_process");
+const output = process.env.SKILLCI_TRACE_FILE;
+const open = fs.openSync.bind(fs);
+const write = fs.writeSync.bind(fs);
+const close = fs.closeSync.bind(fs);
+function valueOf(value) {
+  if (value && typeof value === "object" && "pathname" in value) return value.pathname;
+  return typeof value === "string" ? value : Buffer.isBuffer(value) ? value.toString() : String(value);
+}
+function emit(kind, value) {
+  try {
+    const descriptor = open(output, "a");
+    try { write(descriptor, JSON.stringify({ kind, value }) + "\n", undefined, "utf8"); }
+    finally { close(descriptor); }
+  } catch { }
+}
+function wrap(object, name, kind) {
+  const original = object[name];
+  if (typeof original !== "function") return;
+  object[name] = function (...args) { emit(kind, valueOf(args[0])); return original.apply(this, args); };
+}
+for (const name of ["readFile", "readFileSync", "createReadStream", "readdir", "readdirSync", "stat", "statSync", "lstat", "lstatSync", "access", "accessSync", "realpath", "realpathSync"]) { wrap(fs, name, "read"); wrap(fsp, name, "read"); }
+for (const name of ["writeFile", "writeFileSync", "appendFile", "appendFileSync", "createWriteStream", "mkdir", "mkdirSync", "rm", "rmSync", "unlink", "unlinkSync", "rename", "renameSync", "truncate", "truncateSync", "chmod", "chmodSync", "copyFile", "copyFileSync"]) { wrap(fs, name, "write"); wrap(fsp, name, "write"); }
+function commandOf(command, args) { return [valueOf(command), ...(Array.isArray(args) ? args.map(valueOf) : [])].join(" "); }
+for (const name of ["exec", "execSync", "spawn", "spawnSync", "execFile", "execFileSync", "fork"]) {
+  const original = child[name];
+  if (typeof original !== "function") continue;
+  child[name] = function (...args) { emit("command", name === "fork" ? "node " + valueOf(args[0]) : commandOf(args[0], args[1])); return original.apply(this, args); };
+}
+function wrapNetwork(object, name) {
+  const original = object && object[name];
+  if (typeof original !== "function") return;
+  object[name] = function (...args) { emit("network", name); return original.apply(this, args); };
+}
+for (const moduleName of ["node:http", "node:https", "node:net", "node:tls", "node:dgram"]) {
+  const module = require(moduleName);
+  for (const name of ["request", "get", "connect", "createConnection", "createSocket"]) wrapNetwork(module, name);
+}
+if (typeof globalThis.fetch === "function") {
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = function (...args) { emit("network", "fetch"); return originalFetch.apply(this, args); };
+}
+emit("ready");
+`;
 //# sourceMappingURL=behavior.js.map

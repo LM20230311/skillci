@@ -14,6 +14,16 @@ tools:
     - network
 expect:
   exitCode: 0
+  commands:
+    - node runner.mjs
+    - node -e process.exit(0)
+  reads:
+    - docs/README.md
+    - runner.mjs
+  writes:
+    - docs/README.md
+  network:
+    requests: 0
   files:
     created: []
     modified:

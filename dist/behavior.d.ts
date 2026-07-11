@@ -20,6 +20,12 @@ export type BehaviorCase = {
             modified: string[];
             unchanged: string[];
         };
+        commands: string[];
+        reads: string[];
+        writes: string[];
+        network: {
+            requests: number;
+        };
     };
 };
 export type BehaviorDiagnostic = {
@@ -38,6 +44,10 @@ export type BehaviorAssertion = {
     passed: boolean;
     detail: string;
 };
+export type BehaviorEvent = {
+    kind: "ready" | "read" | "write" | "command" | "network";
+    value?: string;
+};
 export type BehaviorExecution = {
     image: string;
     command: string;
@@ -48,6 +58,11 @@ export type BehaviorExecution = {
     created: string[];
     modified: string[];
     deleted: string[];
+    commands: string[];
+    reads: string[];
+    writes: string[];
+    networkRequests: number;
+    tracingReady: boolean;
     assertions: BehaviorAssertion[];
     passed: boolean;
 };
