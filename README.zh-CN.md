@@ -1,0 +1,228 @@
+# SkillCI
+
+<p align="center">
+  <strong>为你的 AI Agent Skills 加上一道 CI 防线。</strong><br />
+  在有风险的指令变成有风险的操作之前发现它们。
+</p>
+
+<p align="center">
+  <a href="https://github.com/LM20230311/skillci/actions/workflows/ci.yml"><img src="https://github.com/LM20230311/skillci/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT 许可证" /></a>
+  <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js" alt="Node.js 20 或更高版本" /></a>
+</p>
+
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
+> **你的 AI Agent 有 CI；你的 Skills 有吗？**
+
+Agent Skill 可以读取文件、执行命令、调用 API 和修改仓库。SkillCI 是一个开源 CLI 与 GitHub Action：它识别高风险指令、执行版本控制的策略，并让安全回归检查与 Skill 本身放在一起。
+
+它适用于 Codex、Claude Code、Cursor、GitHub Copilot、Gemini CLI，以及其他由指令驱动的 Agent Skills。
+
+**项目计划与迭代记录：** 请查看 [PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+
+```text
+没有 SkillCI："这个 Skill 看起来有用，要合并吗？"
+有了 SkillCI："这个 PR 新增网络访问、读取 .env、并强推 main。阻止它。"
+```
+
+## 当前可发现的风险
+
+| 风险 | 示例 | 规则 |
+| --- | --- | --- |
+| 破坏性删除 | `rm -rf dist` | `SKILLCI001` |
+| 执行远程脚本 | `curl ... \| bash` | `SKILLCI002` |
+| 访问密钥与 SSH 文件 | `.env`、`~/.ssh`、`id_rsa` | `SKILLCI003` |
+| 未审查的网络访问 | `fetch()`、`curl`、`https://` | `SKILLCI004` |
+| 改写 Git 历史 | `git push --force`、`git reset --hard` | `SKILLCI005` |
+| 越出工作区 | `../`、`/Users/`、`/home/` | `SKILLCI006` |
+| 违反项目策略 | 禁止的网络、路径或命令 | `SKILLCI101–103` |
+
+SkillCI 有意采取保守策略：它会标记值得审查的模式，但**不会**声称仅靠静态分析就能证明一个 Skill 绝对安全。
+
+## 看看它如何工作
+
+仓库中包含一个刻意写得不安全的 Skill：
+
+```bash
+git clone https://github.com/LM20230311/skillci.git
+cd skillci
+npm install
+npm run build
+
+node dist/index.js audit examples/risky-skill --no-fail
+```
+
+```text
+SkillCI report
+
+✓ Files scanned: 1
+✗ SKILLCI002  Remote script execution      SKILL.md:10
+✗ SKILLCI001  Destructive recursive delete SKILL.md:12
+✗ SKILLCI003  Sensitive file access        SKILL.md:8
+✗ SKILLCI005  Force push                   SKILL.md:14
+Risk score: CRITICAL
+```
+
+高风险与严重风险默认以退出码 `1` 结束，因此可直接让 CI 失败。仅想生成报告而不阻断当前命令时，加入 `--no-fail`。
+
+## 三分钟上手
+
+### 1. 新建策略与回归案例
+
+```bash
+node dist/index.js init
+```
+
+它会在 Skill 旁创建一份小而可审查的契约：
+
+```text
+skillci/
+├── policy.yml
+├── cases/
+│   └── smoke.yml
+└── fixtures/
+    └── docs-skill/SKILL.md
+```
+
+### 2. 用代码定义边界
+
+```yaml
+# skillci/policy.yml
+deny:
+  paths:
+    - .env
+    - ~/.ssh/**
+  commands:
+    - git push --force
+  network: true
+```
+
+### 3. 审计 Skill
+
+```bash
+node dist/index.js audit .github/skills/release --policy skillci/policy.yml
+```
+
+SkillCI 会同时报告通用风险和策略违规。例如，当策略禁止网络访问时，网络调用会额外触发 `SKILLCI101`。
+
+## 接入 CI
+
+在拥有 Skill 的仓库中，加入以下 GitHub Actions 工作流：
+
+```yaml
+name: Audit agent skills
+
+on:
+  pull_request:
+    paths:
+      - ".github/skills/**"
+      - "skillci/**"
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: LM20230311/skillci@v0.1.0
+        with:
+          path: .github/skills
+          policy: skillci/policy.yml
+          fail-on-risk: true
+```
+
+Action 会输出原生 GitHub workflow annotations，因此审阅者可以在准确的文件和行号看到风险。
+
+## 将安全要求变成回归测试
+
+`skillci test` 让安全预期变成可执行的案例。它会遍历目录中的 YAML 案例；当 Skill 超出最大风险等级，或触发禁止规则时，命令失败。
+
+```yaml
+# skillci/cases/docs-skill.yml
+name: documentation-skill-stays-safe
+target: ../fixtures/docs-skill
+policy: ../policy.yml
+expect:
+  maxRisk: low
+  forbiddenRules:
+    - SKILLCI001
+    - SKILLCI002
+```
+
+```bash
+node dist/index.js test skillci/cases
+```
+
+```text
+# SkillCI test run
+
+- Cases: 1
+- Passed: 1
+- Failed: 0
+```
+
+## CLI 参考
+
+```bash
+# 生成策略、安全示例 Skill 和回归案例。
+skillci init [directory]
+
+# 审计文件或目录。
+skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
+
+# 输出 Markdown 报告。
+skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
+
+# 运行一个 YAML 案例或一个案例目录。
+skillci test <cases-path> [--format markdown|json] [--no-fail]
+```
+
+## 为什么要做这个项目
+
+Agent 生态正在从单纯的 Prompt 转向可移植、可安装的能力：Skills、MCP Servers、Plugins 和指令文件。它很强大，但也意味着一个小小的 Markdown 文件可能影响开发者的文件系统、凭据、代码仓库和外部服务。
+
+这些能力同样需要熟悉的工程控制手段：
+
+- **策略（Policies）** 定义一个 Skill 可以做什么；
+- **审计（Audits）** 在 PR 中暴露风险变更；
+- **回归案例（Regression cases）** 防止更新后的 Skill 悄悄变差；
+- **CI** 让这些检查自动运行、可被审阅。
+
+SkillCI 希望成为这套控制机制轻量、开放的基础。
+
+## 当前范围与路线图
+
+### 已提供
+
+- [x] 无运行时依赖的 TypeScript CLI
+- [x] 静态审计规则，以及 Markdown、JSON、GitHub annotation 报告
+- [x] 版本控制的 `deny.network`、`deny.paths` 和 `deny.commands` 策略
+- [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
+- [x] Composite GitHub Action
+
+### 下一步
+
+- [ ] 支持 glob 语义的路径策略与网络主机 allowlist
+- [ ] 在隔离沙箱中运行基于 fixture 的行为测试
+- [ ] 适配 Codex、Claude Code、Cursor 与 GitHub Copilot 的约定
+- [ ] 建立公开的危险与失效 Skill 样本库
+- [ ] SARIF 上传与更丰富的 PR 摘要
+
+## 贡献
+
+当前最有价值的贡献是真实风险模式、误报反馈、策略范例和 Skill fixtures。请在提交宽泛规则之前，先通过 Issue 提供最小可复现示例。
+
+```bash
+npm install
+npm test
+```
+
+## 安全提示
+
+不要把 SkillCI 当成沙箱或完整安全边界。运行不可信 Skill 时，请使用最小权限、受限凭据、显式审批和隔离环境。
+
+## 许可证
+
+[MIT](LICENSE)

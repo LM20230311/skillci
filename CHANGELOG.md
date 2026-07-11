@@ -2,6 +2,12 @@
 
 All notable changes to SkillCI are recorded in this file.
 
+## [Unreleased]
+
+### Added
+
+- Simplified Chinese README and a repository-level agent contribution guide.
+
 ## [0.1.0] - 2026-07-11
 
 ### Added

@@ -11,6 +11,10 @@
   <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js" alt="Node.js 20 or later" /></a>
 </p>
 
+<p align="center">
+  <a href="README.md">English</a> · <a href="README.zh-CN.md">简体中文</a>
+</p>
+
 > **Your AI agent has CI. Do your skills?**
 
 Agent Skills can read files, run commands, call APIs, and change repositories. SkillCI is an open-source CLI and GitHub Action that finds risky instructions, enforces version-controlled policies, and keeps regression checks close to the Skill itself.
