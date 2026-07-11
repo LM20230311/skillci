@@ -5,7 +5,7 @@ import { join } from "node:path";
 import test from "node:test";
 import { initialize } from "./init.js";
 import { audit } from "./audit.js";
-import { extractNetworkHosts, extractWorkingDirectories, hostIsAllowed, matchesCommandPattern, matchesDeniedPath, validatePolicy } from "./policy.js";
+import { diffPolicies, extractNetworkHosts, extractWorkingDirectories, hostIsAllowed, matchesCommandPattern, matchesDeniedPath, renderPolicyDiff, validatePolicy } from "./policy.js";
 test("validates an allowlisted network policy", () => {
     const root = mkdtempSync(join(tmpdir(), "skillci-policy-test-"));
     try {
@@ -67,6 +67,23 @@ test("generates a starter policy that validates without unused permissions", () 
         const result = validatePolicy(join(root, "skillci", "policy.yml"));
         assert.equal(result.valid, true);
         assert.deepEqual(result.policy?.allowedHosts, []);
+    }
+    finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
+test("highlights permission expansions in a policy diff", () => {
+    const root = mkdtempSync(join(tmpdir(), "skillci-policy-test-"));
+    try {
+        const beforePath = join(root, "before.yml");
+        const afterPath = join(root, "after.yml");
+        writeFileSync(beforePath, "deny:\n  network: true\n  paths:\n    - .env\n  commands:\n    - git push --force\n", "utf8");
+        writeFileSync(afterPath, "allow:\n  network:\n    - api.github.com\ndeny:\n  commandPatterns:\n    - terraform apply *-auto-approve\n", "utf8");
+        const diff = diffPolicies(beforePath, afterPath);
+        const expansions = diff.changes.filter((change) => change.kind === "permission-added");
+        assert.deepEqual(expansions.map((change) => `${change.field}:${change.value}`), ["allow.network:api.github.com", "deny.commands:git push --force", "deny.network:false", "deny.paths:.env"]);
+        assert.match(renderPolicyDiff(diff), /Permission expansions/);
+        assert.equal(diff.changes.some((change) => change.kind === "restriction-added" && change.field === "deny.commandPatterns"), true);
     }
     finally {
         rmSync(root, { recursive: true, force: true });

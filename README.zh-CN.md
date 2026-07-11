@@ -162,6 +162,31 @@ skillci policy check skillci/policy.yml
 
 可复制的文档、发布和基础设施策略示例位于 [`examples/policies`](examples/policies)。
 
+### 在合并前审阅策略扩权
+
+比较已检出的基线策略与待合并策略：
+
+```bash
+skillci policy diff policy/main.yml skillci/policy.yml
+```
+
+SkillCI 会将新增限制与**权限扩大**分开显示。新增 `allow.network` 主机、移除一条 `deny.paths`，或把 `deny.network` 从 `true` 改为 `false`，都会出现在醒目的警告标题下，供审阅者判断新增访问是否合理。
+
+当工作流检出基线策略后，GitHub Action 也可以为这些扩权添加注释：
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    ref: main
+    path: policy-main
+
+- uses: LM20230311/skillci@v0.2.0
+  with:
+    path: .github/skills
+    policy: skillci/policy.yml
+    base-policy: policy-main/skillci/policy.yml
+```
+
 ### 添加经过审查的例外，而不隐藏它
 
 有些发现是有意为之。只抑制紧随其后的那一行上的精确规则，并向审阅者说明理由：
@@ -198,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.1.0
+- uses: LM20230311/skillci@v0.2.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
@@ -252,6 +277,9 @@ skillci test <cases-path> [--format markdown|json] [--no-fail]
 
 # 在策略进入 CI 前验证它。
 skillci policy check <file> [--format markdown|json]
+
+# 比较基线策略与待合并策略。
+skillci policy diff <before-file> <after-file> [--format markdown|json|github]
 ```
 
 ## 为什么要做这个项目
@@ -276,12 +304,12 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 - [x] 版本控制的路径 glob、网络主机 allowlist、命令模式与工作目录边界
 - [x] `skillci policy check` 会拒绝无效或互相矛盾的策略语法
 - [x] 必须填写理由、且仍会在报告中展示的内联抑制机制
+- [x] 区分权限扩大与新增限制的策略 diff
 - [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
 - [x] Composite GitHub Action
 
 ### 下一步
 
-- [ ] 清晰展示新增权限请求的策略 diff
 - [ ] 在隔离沙箱中运行基于 fixture 的行为测试
 - [ ] 适配 Codex、Claude Code、Cursor 与 GitHub Copilot 的约定
 - [ ] 建立公开的危险与失效 Skill 样本库

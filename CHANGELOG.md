@@ -4,12 +4,15 @@ All notable changes to SkillCI are recorded in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-07-11
+
 ### Added
 
 - Simplified Chinese README and a repository-level agent contribution guide.
 - `skillci policy check`, glob-aware path denies, `allow.network` host allowlists, and three policy examples.
 - `deny.commandPatterns` and `deny.workingDirectories`, including `SKILLCI105` findings for prohibited working directories.
 - Reviewable inline suppressions with mandatory reasons, visible audit output, and `SKILLCI106` validation findings.
+- `skillci policy diff` and the Action `base-policy` input, which flag policy permission expansions for review.
 
 ### Changed
 

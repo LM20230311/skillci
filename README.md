@@ -162,6 +162,31 @@ skillci policy check skillci/policy.yml
 
 Copyable documentation, release, and infrastructure examples are available in [`examples/policies`](examples/policies).
 
+### Review policy expansions before merge
+
+Compare the checked-out base policy with the proposed policy:
+
+```bash
+skillci policy diff policy/main.yml skillci/policy.yml
+```
+
+SkillCI separates new restrictions from **permission expansions**. Adding an `allow.network` host, removing a `deny.paths` entry, or changing `deny.network` from `true` to `false` is displayed under a warning heading so reviewers can decide whether that new access is justified.
+
+The GitHub Action can annotate those expansions when the workflow checks out the baseline policy:
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    ref: main
+    path: policy-main
+
+- uses: LM20230311/skillci@v0.2.0
+  with:
+    path: .github/skills
+    policy: skillci/policy.yml
+    base-policy: policy-main/skillci/policy.yml
+```
+
 ### Add a reviewed exception without hiding it
 
 Sometimes a finding is intentional. Suppress only the exact rule on the immediately following line, and give reviewers a reason:
@@ -198,7 +223,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.1.0
+- uses: LM20230311/skillci@v0.2.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
@@ -252,6 +277,9 @@ skillci test <cases-path> [--format markdown|json] [--no-fail]
 
 # Validate a policy before using it in CI.
 skillci policy check <file> [--format markdown|json]
+
+# Compare a baseline policy with a proposed policy.
+skillci policy diff <before-file> <after-file> [--format markdown|json|github]
 ```
 
 ## Why this project exists
@@ -276,13 +304,13 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 - [x] Version-controlled path globs, network host allowlists, command patterns, and working-directory boundaries
 - [x] `skillci policy check` fails closed on invalid or contradictory policy syntax
 - [x] Inline, reason-required suppressions that remain visible in audit reports
+- [x] Policy diffs that distinguish permission expansions from newly added restrictions
 - [x] YAML regression cases for maximum risk and forbidden rules
 - [x] Composite GitHub Action
 
 ### Next
 
 - [ ] Reviewed suppressions and exceptions with a required reason
-- [ ] Clear policy diffs that highlight newly requested permissions
 - [ ] Fixture-based behavior tests in an isolated sandbox
 - [ ] Adapters for Codex, Claude Code, Cursor, and GitHub Copilot conventions
 - [ ] A public corpus of unsafe and broken Skills

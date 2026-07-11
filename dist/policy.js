@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from "node:fs";
 import { minimatch } from "minimatch";
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 /**
  * Validate SkillCI's intentionally small YAML subset. Unknown fields fail
  * closed instead of being silently ignored, which keeps policies reviewable.
@@ -102,6 +102,49 @@ export function renderPolicyValidation(result) {
     }
     return `${lines.join("\n")}\n`;
 }
+export function diffPolicies(beforePath, afterPath) {
+    const before = loadPolicy(beforePath);
+    const after = loadPolicy(afterPath);
+    const changes = [];
+    if (before.deniedNetwork !== after.deniedNetwork) {
+        changes.push({ kind: after.deniedNetwork ? "restriction-added" : "permission-added", field: "deny.network", value: after.deniedNetwork ? "true" : "false" });
+    }
+    addListDiff(changes, before.allowedHosts, after.allowedHosts, "allow.network", "permission-added", "permission-removed");
+    addListDiff(changes, before.deniedPaths, after.deniedPaths, "deny.paths", "restriction-added", "permission-added");
+    addListDiff(changes, before.deniedCommands, after.deniedCommands, "deny.commands", "restriction-added", "permission-added");
+    addListDiff(changes, before.deniedCommandPatterns, after.deniedCommandPatterns, "deny.commandPatterns", "restriction-added", "permission-added");
+    addListDiff(changes, before.deniedWorkingDirectories, after.deniedWorkingDirectories, "deny.workingDirectories", "restriction-added", "permission-added");
+    return { before, after, changes: changes.sort((left, right) => left.kind.localeCompare(right.kind) || left.field.localeCompare(right.field) || left.value.localeCompare(right.value)) };
+}
+export function renderPolicyDiff(diff) {
+    const lines = ["# SkillCI policy diff", "", `- **Before:** \`${diff.before.path}\``, `- **After:** \`${diff.after.path}\``];
+    if (diff.changes.length === 0)
+        return `${lines.join("\n")}\n\n✅ No policy changes detected.\n`;
+    const expansions = diff.changes.filter((change) => change.kind === "permission-added");
+    const reductions = diff.changes.filter((change) => change.kind === "permission-removed");
+    const restrictions = diff.changes.filter((change) => change.kind === "restriction-added");
+    const removals = diff.changes.filter((change) => change.kind === "restriction-removed");
+    if (expansions.length > 0)
+        lines.push("", "## ⚠️ Permission expansions — review before merge", "", renderChanges(expansions));
+    if (restrictions.length > 0)
+        lines.push("", "## Restrictions added", "", renderChanges(restrictions));
+    if (reductions.length > 0)
+        lines.push("", "## Permissions removed", "", renderChanges(reductions));
+    if (removals.length > 0)
+        lines.push("", "## Restrictions removed", "", renderChanges(removals));
+    return `${lines.join("\n")}\n`;
+}
+export function renderPolicyDiffGitHub(diff) {
+    const file = relative(process.cwd(), diff.after.path) || diff.after.path;
+    const annotations = diff.changes.map((change) => {
+        const level = change.kind === "permission-added" ? "warning" : "notice";
+        const title = change.kind === "permission-added" ? "SkillCI policy permission expansion" : "SkillCI policy change";
+        const action = change.kind.replace(/-/g, " ");
+        return `::${level} file=${escapeGitHub(file)},line=1,title=${escapeGitHub(title)}::${escapeGitHub(`${action}: ${change.field} ${change.value}`)}`;
+    });
+    const summary = `::notice title=SkillCI policy diff::${diff.changes.length} policy change(s), ${diff.changes.filter((change) => change.kind === "permission-added").length} permission expansion(s).`;
+    return [...annotations, summary].join("\n");
+}
 export function matchesDeniedPath(line, pattern) {
     return extractPathCandidates(line).some((candidate) => matchesPathPattern(candidate, pattern));
 }
@@ -154,6 +197,18 @@ function addPolicyValue(policy, section, list, value, line, diagnostics) {
         return;
     }
     destination.push(value);
+}
+function addListDiff(changes, before, after, field, addedKind, removedKind) {
+    for (const value of after.filter((item) => !before.includes(item)))
+        changes.push({ kind: addedKind, field, value });
+    for (const value of before.filter((item) => !after.includes(item)))
+        changes.push({ kind: removedKind, field, value });
+}
+function renderChanges(changes) {
+    return ["| Change | Field | Value |", "| --- | --- | --- |", ...changes.map((change) => `| ${change.kind.replace(/-/g, " ")} | \`${change.field}\` | \`${change.value}\` |`)].join("\n");
+}
+function escapeGitHub(value) {
+    return value.replace(/[\r\n]/g, " ").replace(/%/g, "%25").replace(/:/g, "%3A").replace(/,/g, "%2C");
 }
 function isHostPattern(host) {
     return /^(?:\*\.)?(?:[a-z0-9-]+\.)+[a-z0-9-]+$/i.test(host);

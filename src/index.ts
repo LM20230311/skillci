@@ -3,7 +3,7 @@ import { writeFileSync } from "node:fs";
 import { audit } from "./audit.js";
 import { renderTestRun, runCases } from "./cases.js";
 import { initialize } from "./init.js";
-import { renderPolicyValidation, validatePolicy } from "./policy.js";
+import { diffPolicies, renderPolicyDiff, renderPolicyDiffGitHub, renderPolicyValidation, validatePolicy } from "./policy.js";
 import { renderGitHubAnnotations, renderMarkdown } from "./report.js";
 import type { ReportFormat } from "./types.js";
 
@@ -15,6 +15,7 @@ Usage:
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
   skillci policy check <file> [--format markdown|json]
+  skillci policy diff <before-file> <after-file> [--format markdown|json|github]
 
 Examples:
   skillci init
@@ -23,6 +24,7 @@ Examples:
   skillci audit . --format github
   skillci test skillci/cases
   skillci policy check skillci/policy.yml
+  skillci policy diff policy/main.yml skillci/policy.yml
   skillci report .github/skills/release --output skillci-report.md
 `;
 
@@ -53,15 +55,26 @@ async function main(argv: string[]): Promise<void> {
 
   if (command === "policy") {
     const [subcommand, ...policyArgs] = args;
-    if (subcommand !== "check") throw new Error("policy supports the check subcommand.");
-    const policyPath = policyArgs.find((argument) => !argument.startsWith("-"));
-    if (!policyPath) throw new Error("policy check requires a policy file.");
-    const format = option(policyArgs, "--format") ?? "markdown";
-    if (format !== "markdown" && format !== "json") throw new Error(`Unsupported policy format: ${format}`);
-    const validation = validatePolicy(policyPath);
-    console.log(format === "json" ? JSON.stringify(validation, null, 2) : renderPolicyValidation(validation));
-    if (!validation.valid) process.exitCode = 1;
-    return;
+    if (subcommand === "check") {
+      const policyPath = positionalArgs(policyArgs)[0];
+      if (!policyPath) throw new Error("policy check requires a policy file.");
+      const format = option(policyArgs, "--format") ?? "markdown";
+      if (format !== "markdown" && format !== "json") throw new Error(`Unsupported policy format: ${format}`);
+      const validation = validatePolicy(policyPath);
+      console.log(format === "json" ? JSON.stringify(validation, null, 2) : renderPolicyValidation(validation));
+      if (!validation.valid) process.exitCode = 1;
+      return;
+    }
+    if (subcommand === "diff") {
+      const [beforePath, afterPath] = positionalArgs(policyArgs);
+      if (!beforePath || !afterPath) throw new Error("policy diff requires a before and after policy file.");
+      const format = option(policyArgs, "--format") ?? "markdown";
+      if (format !== "markdown" && format !== "json" && format !== "github") throw new Error(`Unsupported policy diff format: ${format}`);
+      const diff = diffPolicies(beforePath, afterPath);
+      console.log(format === "json" ? JSON.stringify(diff, null, 2) : format === "github" ? renderPolicyDiffGitHub(diff) : renderPolicyDiff(diff));
+      return;
+    }
+    throw new Error("policy supports the check and diff subcommands.");
   }
 
   if (command !== "audit" && command !== "report") {
@@ -91,6 +104,18 @@ async function main(argv: string[]): Promise<void> {
 function option(args: string[], name: string): string | undefined {
   const index = args.indexOf(name);
   return index >= 0 ? args[index + 1] : undefined;
+}
+
+function positionalArgs(args: string[]): string[] {
+  const values: string[] = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index].startsWith("-")) {
+      if (args[index] === "--format") index += 1;
+      continue;
+    }
+    values.push(args[index]);
+  }
+  return values;
 }
 
 function isFormat(value: string): value is ReportFormat {

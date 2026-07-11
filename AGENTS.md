@@ -31,6 +31,7 @@ The current implementation is a dependency-light TypeScript CLI and composite Gi
 - Policy matching must be deterministic and explainable. Avoid silently weakening a policy on parse errors.
 - Use `skillci:ignore-next-line` only for a reviewed, narrow exception. It must name the exact existing rule and include a concise quoted `--reason`; never remove or weaken a detection rule merely to hide a finding.
 - Suppressions must remain visible in reports. Do not add a mechanism that silently excludes a file, directory, or rule from audit output.
+- Treat every policy permission expansion as a review signal. When adding a policy field, update `skillci policy diff` so it can classify additions and removals accurately.
 - Do not execute an untrusted Skill while developing a static rule. Behavior tests must use an explicitly isolated fixture strategy.
 - Preserve the CLI's documented exit-code behavior: high/critical audit findings and failed cases should fail by default; `--no-fail` must remain an explicit opt-out.
 

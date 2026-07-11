@@ -5,7 +5,7 @@ import { writeFileSync as writeFileSync2 } from "node:fs";
 
 // dist/audit.js
 import { existsSync as existsSync2, readdirSync, readFileSync as readFileSync2, statSync } from "node:fs";
-import { relative, resolve as resolve2 } from "node:path";
+import { relative as relative2, resolve as resolve2 } from "node:path";
 
 // dist/policy.js
 import { existsSync, readFileSync } from "node:fs";
@@ -1817,7 +1817,7 @@ minimatch.escape = escape;
 minimatch.unescape = unescape;
 
 // dist/policy.js
-import { resolve } from "node:path";
+import { relative, resolve } from "node:path";
 function validatePolicy(policyPath) {
   const path2 = resolve(policyPath);
   const diagnostics = [];
@@ -1918,6 +1918,53 @@ No policy issues found.
   return `${lines.join("\n")}
 `;
 }
+function diffPolicies(beforePath, afterPath) {
+  const before = loadPolicy(beforePath);
+  const after = loadPolicy(afterPath);
+  const changes = [];
+  if (before.deniedNetwork !== after.deniedNetwork) {
+    changes.push({ kind: after.deniedNetwork ? "restriction-added" : "permission-added", field: "deny.network", value: after.deniedNetwork ? "true" : "false" });
+  }
+  addListDiff(changes, before.allowedHosts, after.allowedHosts, "allow.network", "permission-added", "permission-removed");
+  addListDiff(changes, before.deniedPaths, after.deniedPaths, "deny.paths", "restriction-added", "permission-added");
+  addListDiff(changes, before.deniedCommands, after.deniedCommands, "deny.commands", "restriction-added", "permission-added");
+  addListDiff(changes, before.deniedCommandPatterns, after.deniedCommandPatterns, "deny.commandPatterns", "restriction-added", "permission-added");
+  addListDiff(changes, before.deniedWorkingDirectories, after.deniedWorkingDirectories, "deny.workingDirectories", "restriction-added", "permission-added");
+  return { before, after, changes: changes.sort((left, right) => left.kind.localeCompare(right.kind) || left.field.localeCompare(right.field) || left.value.localeCompare(right.value)) };
+}
+function renderPolicyDiff(diff) {
+  const lines = ["# SkillCI policy diff", "", `- **Before:** \`${diff.before.path}\``, `- **After:** \`${diff.after.path}\``];
+  if (diff.changes.length === 0)
+    return `${lines.join("\n")}
+
+\u2705 No policy changes detected.
+`;
+  const expansions = diff.changes.filter((change) => change.kind === "permission-added");
+  const reductions = diff.changes.filter((change) => change.kind === "permission-removed");
+  const restrictions = diff.changes.filter((change) => change.kind === "restriction-added");
+  const removals = diff.changes.filter((change) => change.kind === "restriction-removed");
+  if (expansions.length > 0)
+    lines.push("", "## \u26A0\uFE0F Permission expansions \u2014 review before merge", "", renderChanges(expansions));
+  if (restrictions.length > 0)
+    lines.push("", "## Restrictions added", "", renderChanges(restrictions));
+  if (reductions.length > 0)
+    lines.push("", "## Permissions removed", "", renderChanges(reductions));
+  if (removals.length > 0)
+    lines.push("", "## Restrictions removed", "", renderChanges(removals));
+  return `${lines.join("\n")}
+`;
+}
+function renderPolicyDiffGitHub(diff) {
+  const file = relative(process.cwd(), diff.after.path) || diff.after.path;
+  const annotations = diff.changes.map((change) => {
+    const level = change.kind === "permission-added" ? "warning" : "notice";
+    const title = change.kind === "permission-added" ? "SkillCI policy permission expansion" : "SkillCI policy change";
+    const action = change.kind.replace(/-/g, " ");
+    return `::${level} file=${escapeGitHub(file)},line=1,title=${escapeGitHub(title)}::${escapeGitHub(`${action}: ${change.field} ${change.value}`)}`;
+  });
+  const summary = `::notice title=SkillCI policy diff::${diff.changes.length} policy change(s), ${diff.changes.filter((change) => change.kind === "permission-added").length} permission expansion(s).`;
+  return [...annotations, summary].join("\n");
+}
 function matchesDeniedPath(line, pattern) {
   return extractPathCandidates(line).some((candidate) => matchesPathPattern(candidate, pattern));
 }
@@ -1960,6 +2007,18 @@ function addPolicyValue(policy, section, list, value, line, diagnostics) {
     return;
   }
   destination.push(value);
+}
+function addListDiff(changes, before, after, field, addedKind, removedKind) {
+  for (const value of after.filter((item) => !before.includes(item)))
+    changes.push({ kind: addedKind, field, value });
+  for (const value of before.filter((item) => !after.includes(item)))
+    changes.push({ kind: removedKind, field, value });
+}
+function renderChanges(changes) {
+  return ["| Change | Field | Value |", "| --- | --- | --- |", ...changes.map((change) => `| ${change.kind.replace(/-/g, " ")} | \`${change.field}\` | \`${change.value}\` |`)].join("\n");
+}
+function escapeGitHub(value) {
+  return value.replace(/[\r\n]/g, " ").replace(/%/g, "%25").replace(/:/g, "%3A").replace(/,/g, "%2C");
 }
 function isHostPattern(host) {
   return /^(?:\*\.)?(?:[a-z0-9-]+\.)+[a-z0-9-]+$/i.test(host);
@@ -2055,7 +2114,7 @@ function audit(targetPath, options = {}) {
     const lines = content.split(/\r?\n/);
     let nextLineSuppression;
     lines.forEach((line, index) => {
-      const relativeFile = relative(absoluteTarget, file) || file;
+      const relativeFile = relative2(absoluteTarget, file) || file;
       const directive = parseSuppressionDirective(line);
       if (directive) {
         if ("error" in directive) {
@@ -2266,7 +2325,7 @@ function score(findings) {
 
 // dist/cases.js
 import { readdirSync as readdirSync2, readFileSync as readFileSync3, statSync as statSync2 } from "node:fs";
-import { dirname, relative as relative2, resolve as resolve3 } from "node:path";
+import { dirname, relative as relative3, resolve as resolve3 } from "node:path";
 var RISK_WEIGHT = { none: 0, low: 1, medium: 2, high: 3, critical: 4 };
 function runCases(casesPath) {
   const absoluteCasesPath = resolve3(casesPath);
@@ -2309,7 +2368,7 @@ function runCase(caseFile) {
     };
   } catch (error2) {
     return {
-      name: definition?.name ?? relative2(process.cwd(), caseFile),
+      name: definition?.name ?? relative3(process.cwd(), caseFile),
       caseFile,
       passed: false,
       expectedMaxRisk: definition?.maxRisk ?? "none",
@@ -2456,9 +2515,9 @@ ${renderSuppressions(result.suppressedFindings)}`;
 function renderGitHubAnnotations(result) {
   const annotations = result.findings.map((finding) => {
     const level = finding.severity === "critical" || finding.severity === "high" ? "error" : "warning";
-    return `::${level} file=${escapeGitHub(finding.file)},line=${finding.line},title=${finding.ruleId} ${escapeGitHub(finding.title)}::${escapeGitHub(finding.detail)}`;
+    return `::${level} file=${escapeGitHub2(finding.file)},line=${finding.line},title=${finding.ruleId} ${escapeGitHub2(finding.title)}::${escapeGitHub2(finding.detail)}`;
   });
-  const suppressions = result.suppressedFindings.map((finding) => `::notice file=${escapeGitHub(finding.file)},line=${finding.line},title=${finding.ruleId} suppressed::${escapeGitHub(finding.reason)}`);
+  const suppressions = result.suppressedFindings.map((finding) => `::notice file=${escapeGitHub2(finding.file)},line=${finding.line},title=${finding.ruleId} suppressed::${escapeGitHub2(finding.reason)}`);
   const summary = `::notice title=SkillCI audit::${result.findings.length} active finding(s), ${result.suppressedFindings.length} suppressed; risk score: ${result.score}.`;
   return [...annotations, ...suppressions, summary].join("\n");
 }
@@ -2488,7 +2547,7 @@ function renderDetail(finding) {
 function badge(value) {
   return value === "none" ? "\u2705 none" : `**${value.toUpperCase()}**`;
 }
-function escapeGitHub(value) {
+function escapeGitHub2(value) {
   return value.replace(/[\r\n]/g, " ").replace(/%/g, "%25").replace(/:/g, "%3A").replace(/,/g, "%2C");
 }
 
@@ -2501,6 +2560,7 @@ Usage:
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
   skillci policy check <file> [--format markdown|json]
+  skillci policy diff <before-file> <after-file> [--format markdown|json|github]
 
 Examples:
   skillci init
@@ -2509,6 +2569,7 @@ Examples:
   skillci audit . --format github
   skillci test skillci/cases
   skillci policy check skillci/policy.yml
+  skillci policy diff policy/main.yml skillci/policy.yml
   skillci report .github/skills/release --output skillci-report.md
 `;
 async function main(argv) {
@@ -2541,19 +2602,31 @@ ${created.map((file) => `  - ${file}`).join("\n")}`);
   }
   if (command === "policy") {
     const [subcommand, ...policyArgs] = args;
-    if (subcommand !== "check")
-      throw new Error("policy supports the check subcommand.");
-    const policyPath = policyArgs.find((argument) => !argument.startsWith("-"));
-    if (!policyPath)
-      throw new Error("policy check requires a policy file.");
-    const format2 = option(policyArgs, "--format") ?? "markdown";
-    if (format2 !== "markdown" && format2 !== "json")
-      throw new Error(`Unsupported policy format: ${format2}`);
-    const validation = validatePolicy(policyPath);
-    console.log(format2 === "json" ? JSON.stringify(validation, null, 2) : renderPolicyValidation(validation));
-    if (!validation.valid)
-      process.exitCode = 1;
-    return;
+    if (subcommand === "check") {
+      const policyPath = positionalArgs(policyArgs)[0];
+      if (!policyPath)
+        throw new Error("policy check requires a policy file.");
+      const format2 = option(policyArgs, "--format") ?? "markdown";
+      if (format2 !== "markdown" && format2 !== "json")
+        throw new Error(`Unsupported policy format: ${format2}`);
+      const validation = validatePolicy(policyPath);
+      console.log(format2 === "json" ? JSON.stringify(validation, null, 2) : renderPolicyValidation(validation));
+      if (!validation.valid)
+        process.exitCode = 1;
+      return;
+    }
+    if (subcommand === "diff") {
+      const [beforePath, afterPath] = positionalArgs(policyArgs);
+      if (!beforePath || !afterPath)
+        throw new Error("policy diff requires a before and after policy file.");
+      const format2 = option(policyArgs, "--format") ?? "markdown";
+      if (format2 !== "markdown" && format2 !== "json" && format2 !== "github")
+        throw new Error(`Unsupported policy diff format: ${format2}`);
+      const diff = diffPolicies(beforePath, afterPath);
+      console.log(format2 === "json" ? JSON.stringify(diff, null, 2) : format2 === "github" ? renderPolicyDiffGitHub(diff) : renderPolicyDiff(diff));
+      return;
+    }
+    throw new Error("policy supports the check and diff subcommands.");
   }
   if (command !== "audit" && command !== "report") {
     throw new Error(`Unknown command: ${command}`);
@@ -2582,6 +2655,18 @@ ${created.map((file) => `  - ${file}`).join("\n")}`);
 function option(args, name) {
   const index = args.indexOf(name);
   return index >= 0 ? args[index + 1] : void 0;
+}
+function positionalArgs(args) {
+  const values = [];
+  for (let index = 0; index < args.length; index += 1) {
+    if (args[index].startsWith("-")) {
+      if (args[index] === "--format")
+        index += 1;
+      continue;
+    }
+    values.push(args[index]);
+  }
+  return values;
 }
 function isFormat(value) {
   return value === "markdown" || value === "json" || value === "github";
