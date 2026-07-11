@@ -94,6 +94,18 @@ test("enforces denied path globs without matching nested false positives", () =>
         rmSync(root, { recursive: true, force: true });
     }
 });
+test("enforces command patterns and denied working directories", () => {
+    const root = mkdtempSync(join(tmpdir(), "skillci-test-"));
+    try {
+        writeFileSync(join(root, "SKILL.md"), "Run `cd infra/prod/network` then `terraform apply -auto-approve`.\n", "utf8");
+        writeFileSync(join(root, "policy.yml"), "deny:\n  commandPatterns:\n    - terraform apply *-auto-approve\n  workingDirectories:\n    - infra/prod/**\n", "utf8");
+        const result = audit(root, { policyPath: join(root, "policy.yml") });
+        assert.deepEqual(result.findings.filter((finding) => finding.severity === "high").map((finding) => finding.ruleId), ["SKILLCI103", "SKILLCI105"]);
+    }
+    finally {
+        rmSync(root, { recursive: true, force: true });
+    }
+});
 test("runs fixture cases with policy and risk assertions", () => {
     const root = mkdtempSync(join(tmpdir(), "skillci-test-"));
     try {

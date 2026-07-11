@@ -4,6 +4,8 @@ export type Policy = {
     allowedHosts: string[];
     deniedPaths: string[];
     deniedCommands: string[];
+    deniedCommandPatterns: string[];
+    deniedWorkingDirectories: string[];
 };
 export type PolicyDiagnostic = {
     line: number;
@@ -24,5 +26,8 @@ export declare function validatePolicy(policyPath: string): PolicyValidation;
 export declare function loadPolicy(policyPath: string): Policy;
 export declare function renderPolicyValidation(result: PolicyValidation): string;
 export declare function matchesDeniedPath(line: string, pattern: string): boolean;
+export declare function matchesPathPattern(candidate: string, pattern: string): boolean;
+export declare function matchesCommandPattern(line: string, pattern: string): boolean;
+export declare function extractWorkingDirectories(line: string): string[];
 export declare function extractNetworkHosts(line: string): string[];
 export declare function hostIsAllowed(host: string, allowedHosts: string[]): boolean;

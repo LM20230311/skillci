@@ -8,6 +8,8 @@ export type Policy = {
   allowedHosts: string[];
   deniedPaths: string[];
   deniedCommands: string[];
+  deniedCommandPatterns: string[];
+  deniedWorkingDirectories: string[];
 };
 
 export type PolicyDiagnostic = {
@@ -24,7 +26,7 @@ export type PolicyValidation = {
 };
 
 type Section = "allow" | "deny";
-type ListKey = "read" | "write" | "commands" | "network" | "paths";
+type ListKey = "read" | "write" | "commands" | "network" | "paths" | "commandPatterns" | "workingDirectories";
 
 /**
  * Validate SkillCI's intentionally small YAML subset. Unknown fields fail
@@ -37,7 +39,7 @@ export function validatePolicy(policyPath: string): PolicyValidation {
     return { path, diagnostics: [{ line: 0, severity: "error", message: `Policy does not exist: ${policyPath}` }], valid: false };
   }
 
-  const policy: Policy = { path, deniedNetwork: false, allowedHosts: [], deniedPaths: [], deniedCommands: [] };
+  const policy: Policy = { path, deniedNetwork: false, allowedHosts: [], deniedPaths: [], deniedCommands: [], deniedCommandPatterns: [], deniedWorkingDirectories: [] };
   let section: Section | undefined;
   let list: ListKey | undefined;
 
@@ -131,7 +133,23 @@ export function renderPolicyValidation(result: PolicyValidation): string {
 }
 
 export function matchesDeniedPath(line: string, pattern: string): boolean {
-  return extractPathCandidates(line).some((candidate) => minimatch(candidate, pattern, { dot: true, matchBase: !pattern.includes("/") }));
+  return extractPathCandidates(line).some((candidate) => matchesPathPattern(candidate, pattern));
+}
+
+export function matchesPathPattern(candidate: string, pattern: string): boolean {
+  return minimatch(candidate, pattern, { dot: true, matchBase: !pattern.includes("/") });
+}
+
+export function matchesCommandPattern(line: string, pattern: string): boolean {
+  return extractCommandCandidates(line).some((command) => minimatch(command, pattern, { dot: true, nocase: true, nocomment: true, nonegate: true }));
+}
+
+export function extractWorkingDirectories(line: string): string[] {
+  const directories = new Set<string>();
+  for (const match of line.matchAll(/\bcd\s+([^\s;&|`]+)/gi)) directories.add(normalizePath(match[1]));
+  for (const match of line.matchAll(/(?:--cwd|--working-directory)\s+([^\s;&|`]+)/gi)) directories.add(normalizePath(match[1]));
+  for (const match of line.matchAll(/\b(?:workdir|workingDirectory)\s*[:=]\s*([^\s,;]+)/gi)) directories.add(normalizePath(match[1]));
+  return [...directories].filter(Boolean);
 }
 
 export function extractNetworkHosts(line: string): string[] {
@@ -146,7 +164,7 @@ export function hostIsAllowed(host: string, allowedHosts: string[]): boolean {
 
 function isListKey(section: Section, key: string): key is ListKey {
   if (section === "allow") return key === "read" || key === "write" || key === "commands" || key === "network";
-  return key === "paths" || key === "commands";
+  return key === "paths" || key === "commands" || key === "commandPatterns" || key === "workingDirectories";
 }
 
 function addPolicyValue(policy: Policy, section: Section, list: ListKey, value: string, line: number, diagnostics: PolicyDiagnostic[]): void {
@@ -154,6 +172,10 @@ function addPolicyValue(policy: Policy, section: Section, list: ListKey, value: 
     ? policy.deniedPaths
     : section === "deny" && list === "commands"
       ? policy.deniedCommands
+      : section === "deny" && list === "commandPatterns"
+        ? policy.deniedCommandPatterns
+        : section === "deny" && list === "workingDirectories"
+          ? policy.deniedWorkingDirectories
       : section === "allow" && list === "network"
         ? policy.allowedHosts
         : undefined;
@@ -175,6 +197,20 @@ function extractPathCandidates(line: string): string[] {
     .split(/\s+/)
     .map((token) => token.replace(/^[`'"([{<]+|[`'"\])}>.,;:!?]+$/g, "").replace(/^\.\//, "").replace(/\\/g, "/"))
     .filter((token) => token.includes("/") || token.startsWith(".") || token.includes("."));
+}
+
+function extractCommandCandidates(line: string): string[] {
+  const codeSpans = [...line.matchAll(/`([^`]+)`/g)].map((match) => normalizeCommand(match[1]));
+  if (codeSpans.length > 0) return codeSpans.filter(Boolean);
+  return [normalizeCommand(line.replace(/^\s*(?:run|execute)\s+/i, ""))].filter(Boolean);
+}
+
+function normalizeCommand(value: string): string {
+  return value.trim().replace(/[.;]+$/, "").replace(/\s+/g, " ");
+}
+
+function normalizePath(value: string): string {
+  return value.replace(/^[`'"([{<]+|[`'"\])}>.,;:!?]+$/g, "").replace(/^\.\//, "").replace(/\\/g, "/");
 }
 
 function error(line: number, message: string): PolicyDiagnostic {

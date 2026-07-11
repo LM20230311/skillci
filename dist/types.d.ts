@@ -20,6 +20,8 @@ export type AuditResult = {
         allowedHosts: string[];
         deniedPaths: string[];
         deniedCommands: string[];
+        deniedCommandPatterns: string[];
+        deniedWorkingDirectories: string[];
     };
 };
 export type ReportFormat = "markdown" | "json" | "github";

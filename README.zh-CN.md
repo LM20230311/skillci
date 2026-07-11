@@ -56,6 +56,7 @@ SkillCI 在合并或安装前给团队一个可审查的答案：**这个 Skill 
 | 越出工作区 | `../`、`/Users/`、`/home/` | `SKILLCI006` |
 | 违反项目策略 | 禁止的网络、路径或命令 | `SKILLCI101–103` |
 | 未获批准的网络主机 | 不在 `allow.network` 中的主机 | `SKILLCI104` |
+| 被禁止的工作目录 | 策略禁止的 `cd` 或 `--cwd` 路径 | `SKILLCI105` |
 
 SkillCI 有意采取保守策略：它会标记值得审查的模式，但**不会**声称仅靠静态分析就能证明一个 Skill 绝对安全。
 
@@ -139,6 +140,18 @@ allow:
 ```
 
 `deny.network: true` 不能与 `allow.network` 同时使用。allowlist 外的主机会报告为 `SKILLCI104`。
+
+对于高风险的命令变体和受保护目录，可使用命令模式与工作目录 glob：
+
+```yaml
+deny:
+  commandPatterns:
+    - terraform apply *-auto-approve
+  workingDirectories:
+    - infra/prod/**
+```
+
+`commandPatterns` 会匹配包含参数的命令指令；`workingDirectories` 会检查 `cd`、`--cwd` 和 `--working-directory` 引用。被禁止的目录会报告为 `SKILLCI105`。
 
 在策略进入 CI 前先验证它：
 
@@ -241,14 +254,13 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 
 - [x] 轻量 TypeScript CLI，以及可独立运行的 GitHub Action bundle
 - [x] 静态审计规则，以及 Markdown、JSON、GitHub annotation 报告
-- [x] 版本控制的路径 glob、网络主机 allowlist 和命令禁止策略
+- [x] 版本控制的路径 glob、网络主机 allowlist、命令模式与工作目录边界
 - [x] `skillci policy check` 会拒绝无效或互相矛盾的策略语法
 - [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
 - [x] Composite GitHub Action
 
 ### 下一步
 
-- [ ] 命令参数与工作目录约束
 - [ ] 带必填理由、可审查的抑制与豁免机制
 - [ ] 清晰展示新增权限请求的策略 diff
 - [ ] 在隔离沙箱中运行基于 fixture 的行为测试

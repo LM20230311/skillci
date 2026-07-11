@@ -56,6 +56,7 @@ SkillCI gives the team a reviewable answer before merge or installation: **what 
 | Workspace escape | `../`, `/Users/`, `/home/` | `SKILLCI006` |
 | Policy violations | denied network, path, or command | `SKILLCI101–103` |
 | Unapproved network host | a host outside `allow.network` | `SKILLCI104` |
+| Denied working directory | a `cd` or `--cwd` path that policy forbids | `SKILLCI105` |
 
 SkillCI is intentionally conservative. It flags patterns that deserve review; it does **not** claim that static analysis alone proves a Skill safe.
 
@@ -139,6 +140,18 @@ allow:
 ```
 
 `deny.network: true` and `allow.network` cannot be combined. A host outside the allowlist is reported as `SKILLCI104`.
+
+For high-risk command variants and protected directories, use command patterns and working-directory globs:
+
+```yaml
+deny:
+  commandPatterns:
+    - terraform apply *-auto-approve
+  workingDirectories:
+    - infra/prod/**
+```
+
+`commandPatterns` match a command instruction including its arguments. `workingDirectories` inspect `cd`, `--cwd`, and `--working-directory` references. A denied directory is reported as `SKILLCI105`.
 
 Validate a policy before it reaches CI:
 
@@ -241,14 +254,13 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 
 - [x] Lightweight TypeScript CLI with a self-contained GitHub Action bundle
 - [x] Static audit rules and Markdown, JSON, and GitHub annotation reports
-- [x] Version-controlled path globs, network host allowlists, and command-deny policies
+- [x] Version-controlled path globs, network host allowlists, command patterns, and working-directory boundaries
 - [x] `skillci policy check` fails closed on invalid or contradictory policy syntax
 - [x] YAML regression cases for maximum risk and forbidden rules
 - [x] Composite GitHub Action
 
 ### Next
 
-- [ ] Command argument and working-directory constraints
 - [ ] Reviewed suppressions and exceptions with a required reason
 - [ ] Clear policy diffs that highlight newly requested permissions
 - [ ] Fixture-based behavior tests in an isolated sandbox

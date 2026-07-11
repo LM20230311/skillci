@@ -11,7 +11,7 @@ export function validatePolicy(policyPath) {
     if (!existsSync(path)) {
         return { path, diagnostics: [{ line: 0, severity: "error", message: `Policy does not exist: ${policyPath}` }], valid: false };
     }
-    const policy = { path, deniedNetwork: false, allowedHosts: [], deniedPaths: [], deniedCommands: [] };
+    const policy = { path, deniedNetwork: false, allowedHosts: [], deniedPaths: [], deniedCommands: [], deniedCommandPatterns: [], deniedWorkingDirectories: [] };
     let section;
     let list;
     for (const [offset, rawLine] of readFileSync(path, "utf8").split(/\r?\n/).entries()) {
@@ -103,7 +103,23 @@ export function renderPolicyValidation(result) {
     return `${lines.join("\n")}\n`;
 }
 export function matchesDeniedPath(line, pattern) {
-    return extractPathCandidates(line).some((candidate) => minimatch(candidate, pattern, { dot: true, matchBase: !pattern.includes("/") }));
+    return extractPathCandidates(line).some((candidate) => matchesPathPattern(candidate, pattern));
+}
+export function matchesPathPattern(candidate, pattern) {
+    return minimatch(candidate, pattern, { dot: true, matchBase: !pattern.includes("/") });
+}
+export function matchesCommandPattern(line, pattern) {
+    return extractCommandCandidates(line).some((command) => minimatch(command, pattern, { dot: true, nocase: true, nocomment: true, nonegate: true }));
+}
+export function extractWorkingDirectories(line) {
+    const directories = new Set();
+    for (const match of line.matchAll(/\bcd\s+([^\s;&|`]+)/gi))
+        directories.add(normalizePath(match[1]));
+    for (const match of line.matchAll(/(?:--cwd|--working-directory)\s+([^\s;&|`]+)/gi))
+        directories.add(normalizePath(match[1]));
+    for (const match of line.matchAll(/\b(?:workdir|workingDirectory)\s*[:=]\s*([^\s,;]+)/gi))
+        directories.add(normalizePath(match[1]));
+    return [...directories].filter(Boolean);
 }
 export function extractNetworkHosts(line) {
     const hosts = new Set();
@@ -117,16 +133,20 @@ export function hostIsAllowed(host, allowedHosts) {
 function isListKey(section, key) {
     if (section === "allow")
         return key === "read" || key === "write" || key === "commands" || key === "network";
-    return key === "paths" || key === "commands";
+    return key === "paths" || key === "commands" || key === "commandPatterns" || key === "workingDirectories";
 }
 function addPolicyValue(policy, section, list, value, line, diagnostics) {
     const destination = section === "deny" && list === "paths"
         ? policy.deniedPaths
         : section === "deny" && list === "commands"
             ? policy.deniedCommands
-            : section === "allow" && list === "network"
-                ? policy.allowedHosts
-                : undefined;
+            : section === "deny" && list === "commandPatterns"
+                ? policy.deniedCommandPatterns
+                : section === "deny" && list === "workingDirectories"
+                    ? policy.deniedWorkingDirectories
+                    : section === "allow" && list === "network"
+                        ? policy.allowedHosts
+                        : undefined;
     if (!destination)
         return;
     if (destination.includes(value)) {
@@ -143,6 +163,18 @@ function extractPathCandidates(line) {
         .split(/\s+/)
         .map((token) => token.replace(/^[`'"([{<]+|[`'"\])}>.,;:!?]+$/g, "").replace(/^\.\//, "").replace(/\\/g, "/"))
         .filter((token) => token.includes("/") || token.startsWith(".") || token.includes("."));
+}
+function extractCommandCandidates(line) {
+    const codeSpans = [...line.matchAll(/`([^`]+)`/g)].map((match) => normalizeCommand(match[1]));
+    if (codeSpans.length > 0)
+        return codeSpans.filter(Boolean);
+    return [normalizeCommand(line.replace(/^\s*(?:run|execute)\s+/i, ""))].filter(Boolean);
+}
+function normalizeCommand(value) {
+    return value.trim().replace(/[.;]+$/, "").replace(/\s+/g, " ");
+}
+function normalizePath(value) {
+    return value.replace(/^[`'"([{<]+|[`'"\])}>.,;:!?]+$/g, "").replace(/^\.\//, "").replace(/\\/g, "/");
 }
 function error(line, message) {
     return { line, severity: "error", message };

@@ -1824,7 +1824,7 @@ function validatePolicy(policyPath) {
   if (!existsSync(path2)) {
     return { path: path2, diagnostics: [{ line: 0, severity: "error", message: `Policy does not exist: ${policyPath}` }], valid: false };
   }
-  const policy = { path: path2, deniedNetwork: false, allowedHosts: [], deniedPaths: [], deniedCommands: [] };
+  const policy = { path: path2, deniedNetwork: false, allowedHosts: [], deniedPaths: [], deniedCommands: [], deniedCommandPatterns: [], deniedWorkingDirectories: [] };
   let section;
   let list;
   for (const [offset, rawLine] of readFileSync(path2, "utf8").split(/\r?\n/).entries()) {
@@ -1919,7 +1919,23 @@ No policy issues found.
 `;
 }
 function matchesDeniedPath(line, pattern) {
-  return extractPathCandidates(line).some((candidate) => minimatch(candidate, pattern, { dot: true, matchBase: !pattern.includes("/") }));
+  return extractPathCandidates(line).some((candidate) => matchesPathPattern(candidate, pattern));
+}
+function matchesPathPattern(candidate, pattern) {
+  return minimatch(candidate, pattern, { dot: true, matchBase: !pattern.includes("/") });
+}
+function matchesCommandPattern(line, pattern) {
+  return extractCommandCandidates(line).some((command) => minimatch(command, pattern, { dot: true, nocase: true, nocomment: true, nonegate: true }));
+}
+function extractWorkingDirectories(line) {
+  const directories = /* @__PURE__ */ new Set();
+  for (const match2 of line.matchAll(/\bcd\s+([^\s;&|`]+)/gi))
+    directories.add(normalizePath(match2[1]));
+  for (const match2 of line.matchAll(/(?:--cwd|--working-directory)\s+([^\s;&|`]+)/gi))
+    directories.add(normalizePath(match2[1]));
+  for (const match2 of line.matchAll(/\b(?:workdir|workingDirectory)\s*[:=]\s*([^\s,;]+)/gi))
+    directories.add(normalizePath(match2[1]));
+  return [...directories].filter(Boolean);
 }
 function extractNetworkHosts(line) {
   const hosts = /* @__PURE__ */ new Set();
@@ -1933,10 +1949,10 @@ function hostIsAllowed(host, allowedHosts) {
 function isListKey(section, key) {
   if (section === "allow")
     return key === "read" || key === "write" || key === "commands" || key === "network";
-  return key === "paths" || key === "commands";
+  return key === "paths" || key === "commands" || key === "commandPatterns" || key === "workingDirectories";
 }
 function addPolicyValue(policy, section, list, value, line, diagnostics) {
-  const destination = section === "deny" && list === "paths" ? policy.deniedPaths : section === "deny" && list === "commands" ? policy.deniedCommands : section === "allow" && list === "network" ? policy.allowedHosts : void 0;
+  const destination = section === "deny" && list === "paths" ? policy.deniedPaths : section === "deny" && list === "commands" ? policy.deniedCommands : section === "deny" && list === "commandPatterns" ? policy.deniedCommandPatterns : section === "deny" && list === "workingDirectories" ? policy.deniedWorkingDirectories : section === "allow" && list === "network" ? policy.allowedHosts : void 0;
   if (!destination)
     return;
   if (destination.includes(value)) {
@@ -1950,6 +1966,18 @@ function isHostPattern(host) {
 }
 function extractPathCandidates(line) {
   return line.split(/\s+/).map((token) => token.replace(/^[`'"([{<]+|[`'"\])}>.,;:!?]+$/g, "").replace(/^\.\//, "").replace(/\\/g, "/")).filter((token) => token.includes("/") || token.startsWith(".") || token.includes("."));
+}
+function extractCommandCandidates(line) {
+  const codeSpans = [...line.matchAll(/`([^`]+)`/g)].map((match2) => normalizeCommand(match2[1]));
+  if (codeSpans.length > 0)
+    return codeSpans.filter(Boolean);
+  return [normalizeCommand(line.replace(/^\s*(?:run|execute)\s+/i, ""))].filter(Boolean);
+}
+function normalizeCommand(value) {
+  return value.trim().replace(/[.;]+$/, "").replace(/\s+/g, " ");
+}
+function normalizePath(value) {
+  return value.replace(/^[`'"([{<]+|[`'"\])}>.,;:!?]+$/g, "").replace(/^\.\//, "").replace(/\\/g, "/");
 }
 function error(line, message) {
   return { line, severity: "error", message };
@@ -2050,7 +2078,9 @@ function audit(targetPath, options = {}) {
       deniedNetwork: policy.deniedNetwork,
       allowedHosts: policy.allowedHosts,
       deniedPaths: policy.deniedPaths,
-      deniedCommands: policy.deniedCommands
+      deniedCommands: policy.deniedCommands,
+      deniedCommandPatterns: policy.deniedCommandPatterns,
+      deniedWorkingDirectories: policy.deniedWorkingDirectories
     }
   };
 }
@@ -2108,6 +2138,35 @@ function policyFindings(policy, line, file, lineNumber) {
         title: "Policy denies command",
         detail: `This instruction includes ${deniedCommand}, which is denied by the selected policy.`,
         remediation: "Remove the command or approve a specific, narrowly scoped exception.",
+        file,
+        line: lineNumber,
+        excerpt
+      });
+    }
+  }
+  for (const commandPattern of policy.deniedCommandPatterns) {
+    if (matchesCommandPattern(line, commandPattern)) {
+      findings.push({
+        ruleId: "SKILLCI103",
+        severity: "high",
+        title: "Policy denies command",
+        detail: `This instruction matches the denied command pattern ${commandPattern}.`,
+        remediation: "Remove the command or approve a specific, narrowly scoped exception.",
+        file,
+        line: lineNumber,
+        excerpt
+      });
+    }
+  }
+  for (const workingDirectory of extractWorkingDirectories(line)) {
+    const deniedPattern = policy.deniedWorkingDirectories.find((pattern) => matchesPathPattern(workingDirectory, pattern));
+    if (deniedPattern) {
+      findings.push({
+        ruleId: "SKILLCI105",
+        severity: "high",
+        title: "Policy denies working directory",
+        detail: `This instruction changes into ${workingDirectory}, which matches the denied working-directory pattern ${deniedPattern}.`,
+        remediation: "Run the command from an approved directory or change the reviewed policy with a narrower exception.",
         file,
         line: lineNumber,
         excerpt

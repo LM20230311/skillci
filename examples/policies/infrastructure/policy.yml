@@ -5,8 +5,10 @@ allow:
 deny:
   paths:
     - .env
-    - infra/prod/**
     - **/*.tfstate
   commands:
-    - terraform apply
     - kubectl delete
+  commandPatterns:
+    - terraform apply *-auto-approve
+  workingDirectories:
+    - infra/prod/**

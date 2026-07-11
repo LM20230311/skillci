@@ -95,7 +95,7 @@
 
 - [x] 对路径规则使用 glob 语义，而不是字符串包含。
 - [x] 支持网络主机 allowlist，例如只允许 `api.github.com`。
-- [ ] 支持命令参数与工作目录约束。
+- [x] 支持命令参数与工作目录约束。
 - [ ] 为规则增加稳定的抑制/豁免机制，并要求说明原因。
 - [x] 增加策略校验命令：`skillci policy check`。
 - [ ] 输出清晰的 policy diff，突出“本次 PR 新增了什么权限”。
@@ -112,6 +112,7 @@
 - [x] 新增 `allow.network`，并在未识别或未允许的主机上报告 `SKILLCI104`。
 - [x] 新增 fail-closed 的 `skillci policy check`，拒绝未知字段、无效列表和互相矛盾的网络策略。
 - [x] 新增文档、发布、基础设施三套可复制策略示例与正反例测试。
+- [x] 新增 `deny.commandPatterns` 与 `deny.workingDirectories`，覆盖带风险参数的命令与生产目录边界。
 
 ---
 

@@ -22,6 +22,8 @@ export type AuditResult = {
     allowedHosts: string[];
     deniedPaths: string[];
     deniedCommands: string[];
+    deniedCommandPatterns: string[];
+    deniedWorkingDirectories: string[];
   };
 };
 

@@ -4,7 +4,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 import { initialize } from "./init.js";
-import { extractNetworkHosts, hostIsAllowed, matchesDeniedPath, validatePolicy } from "./policy.js";
+import { audit } from "./audit.js";
+import { extractNetworkHosts, extractWorkingDirectories, hostIsAllowed, matchesCommandPattern, matchesDeniedPath, validatePolicy } from "./policy.js";
 test("validates an allowlisted network policy", () => {
     const root = mkdtempSync(join(tmpdir(), "skillci-policy-test-"));
     try {
@@ -43,11 +44,21 @@ test("extracts and matches allowlisted network hosts", () => {
     assert.equal(hostIsAllowed("uploads.github.com", ["*.github.com"]), true);
     assert.equal(hostIsAllowed("example.com", ["*.github.com"]), false);
 });
+test("matches command patterns and extracts working directories", () => {
+    assert.equal(matchesCommandPattern("Run `terraform apply -auto-approve`.", "terraform apply *-auto-approve"), true);
+    assert.equal(matchesCommandPattern("Run `terraform plan`.", "terraform apply *-auto-approve"), false);
+    assert.deepEqual(extractWorkingDirectories("Run `cd infra/prod/network && terraform apply`."), ["infra/prod/network"]);
+    assert.deepEqual(extractWorkingDirectories("Run npm --cwd docs build."), ["docs"]);
+});
 test("keeps every published policy example valid", () => {
     for (const example of ["documentation", "release", "infrastructure"]) {
         const result = validatePolicy(`examples/policies/${example}/policy.yml`);
         assert.equal(result.valid, true, `${example} policy should be valid`);
     }
+});
+test("reports command and directory boundaries in the infrastructure example", () => {
+    const result = audit("examples/policies/infrastructure/unsafe-instruction.md", { policyPath: "examples/policies/infrastructure/policy.yml" });
+    assert.deepEqual(result.findings.filter((finding) => finding.severity === "high").map((finding) => finding.ruleId), ["SKILLCI103", "SKILLCI105"]);
 });
 test("generates a starter policy that validates without unused permissions", () => {
     const root = mkdtempSync(join(tmpdir(), "skillci-policy-test-"));

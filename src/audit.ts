@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { extractNetworkHosts, hostIsAllowed, loadPolicy, matchesDeniedPath, type Policy } from "./policy.js";
+import { extractNetworkHosts, extractWorkingDirectories, hostIsAllowed, loadPolicy, matchesCommandPattern, matchesDeniedPath, matchesPathPattern, type Policy } from "./policy.js";
 import type { AuditResult, Finding, Severity } from "./types.js";
 
 type Rule = Omit<Finding, "file" | "line" | "excerpt"> & { pattern: RegExp };
@@ -99,7 +99,9 @@ export function audit(targetPath: string, options: { policyPath?: string } = {})
       deniedNetwork: policy.deniedNetwork,
       allowedHosts: policy.allowedHosts,
       deniedPaths: policy.deniedPaths,
-      deniedCommands: policy.deniedCommands
+      deniedCommands: policy.deniedCommands,
+      deniedCommandPatterns: policy.deniedCommandPatterns,
+      deniedWorkingDirectories: policy.deniedWorkingDirectories
     }
   };
 }
@@ -160,6 +162,35 @@ function policyFindings(policy: Policy, line: string, file: string, lineNumber: 
         title: "Policy denies command",
         detail: `This instruction includes ${deniedCommand}, which is denied by the selected policy.`,
         remediation: "Remove the command or approve a specific, narrowly scoped exception.",
+        file,
+        line: lineNumber,
+        excerpt
+      });
+    }
+  }
+  for (const commandPattern of policy.deniedCommandPatterns) {
+    if (matchesCommandPattern(line, commandPattern)) {
+      findings.push({
+        ruleId: "SKILLCI103",
+        severity: "high",
+        title: "Policy denies command",
+        detail: `This instruction matches the denied command pattern ${commandPattern}.`,
+        remediation: "Remove the command or approve a specific, narrowly scoped exception.",
+        file,
+        line: lineNumber,
+        excerpt
+      });
+    }
+  }
+  for (const workingDirectory of extractWorkingDirectories(line)) {
+    const deniedPattern = policy.deniedWorkingDirectories.find((pattern) => matchesPathPattern(workingDirectory, pattern));
+    if (deniedPattern) {
+      findings.push({
+        ruleId: "SKILLCI105",
+        severity: "high",
+        title: "Policy denies working directory",
+        detail: `This instruction changes into ${workingDirectory}, which matches the denied working-directory pattern ${deniedPattern}.`,
+        remediation: "Run the command from an approved directory or change the reviewed policy with a narrower exception.",
         file,
         line: lineNumber,
         excerpt
