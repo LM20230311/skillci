@@ -54,6 +54,7 @@ const RULES = [
 const SKIPPED_DIRECTORIES = new Set([".git", "node_modules", "dist", "coverage"]);
 const TEXT_EXTENSIONS = new Set([".md", ".txt", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts", ".json", ".yml", ".yaml"]);
 const SEVERITY_WEIGHT = { critical: 4, high: 3, medium: 2, low: 1 };
+const KNOWN_RULE_IDS = new Set([...RULES.map((rule) => rule.ruleId), "SKILLCI101", "SKILLCI102", "SKILLCI103", "SKILLCI104", "SKILLCI105"]);
 export function audit(targetPath, options = {}) {
     const absoluteTarget = resolve(targetPath);
     if (!existsSync(absoluteTarget)) {
@@ -62,30 +63,56 @@ export function audit(targetPath, options = {}) {
     const policy = options.policyPath ? loadPolicy(options.policyPath) : undefined;
     const files = collectFiles(absoluteTarget).filter((file) => file !== policy?.path);
     const findings = [];
+    const suppressedFindings = [];
     for (const file of files) {
         const content = readFileSync(file, "utf8");
         const lines = content.split(/\r?\n/);
+        let nextLineSuppression;
         lines.forEach((line, index) => {
+            const relativeFile = relative(absoluteTarget, file) || file;
+            const directive = parseSuppressionDirective(line);
+            if (directive) {
+                if ("error" in directive) {
+                    findings.push(invalidSuppressionFinding(directive.error, relativeFile, index + 1, line));
+                    nextLineSuppression = undefined;
+                }
+                else {
+                    nextLineSuppression = directive;
+                }
+                return;
+            }
+            const lineFindings = [];
             for (const rule of RULES) {
                 rule.pattern.lastIndex = 0;
                 if (!rule.pattern.test(line))
                     continue;
-                findings.push({
+                lineFindings.push({
                     ...withoutPattern(rule),
-                    file: relative(absoluteTarget, file) || file,
+                    file: relativeFile,
                     line: index + 1,
                     excerpt: line.trim().slice(0, 180)
                 });
             }
             if (policy)
-                findings.push(...policyFindings(policy, line, relative(absoluteTarget, file) || file, index + 1));
+                lineFindings.push(...policyFindings(policy, line, relativeFile, index + 1));
+            for (const finding of lineFindings) {
+                if (nextLineSuppression?.ruleIds.includes(finding.ruleId)) {
+                    suppressedFindings.push({ ruleId: finding.ruleId, title: finding.title, file: finding.file, line: finding.line, excerpt: finding.excerpt, reason: nextLineSuppression.reason });
+                }
+                else {
+                    findings.push(finding);
+                }
+            }
+            nextLineSuppression = undefined;
         });
     }
     findings.sort((left, right) => SEVERITY_WEIGHT[right.severity] - SEVERITY_WEIGHT[left.severity] || left.file.localeCompare(right.file) || left.line - right.line);
+    suppressedFindings.sort((left, right) => left.file.localeCompare(right.file) || left.line - right.line || left.ruleId.localeCompare(right.ruleId));
     return {
         target: absoluteTarget,
         scannedFiles: files.length,
         findings,
+        suppressedFindings,
         score: score(findings),
         policy: policy && {
             path: policy.path,
@@ -96,6 +123,33 @@ export function audit(targetPath, options = {}) {
             deniedCommandPatterns: policy.deniedCommandPatterns,
             deniedWorkingDirectories: policy.deniedWorkingDirectories
         }
+    };
+}
+function parseSuppressionDirective(line) {
+    if (!/skillci:ignore-next-line/i.test(line))
+        return undefined;
+    const match = line.match(/skillci:ignore-next-line\s+([A-Z0-9_,\s-]+?)\s+--reason\s+(["'])(.*?)\2/i);
+    if (!match)
+        return { error: "Invalid suppression. Use skillci:ignore-next-line SKILLCI004 --reason \"reviewed reason\"." };
+    const ruleIds = match[1].split(",").map((ruleId) => ruleId.trim().toUpperCase()).filter(Boolean);
+    const reason = match[3].trim();
+    if (ruleIds.length === 0 || !reason)
+        return { error: "A suppression requires at least one rule ID and a non-empty quoted reason." };
+    const unknown = ruleIds.filter((ruleId) => !KNOWN_RULE_IDS.has(ruleId));
+    if (unknown.length > 0)
+        return { error: `Suppression references unknown rule IDs: ${unknown.join(", ")}.` };
+    return { ruleIds, reason };
+}
+function invalidSuppressionFinding(detail, file, line, source) {
+    return {
+        ruleId: "SKILLCI106",
+        severity: "high",
+        title: "Invalid suppression directive",
+        detail,
+        remediation: "Use an exact existing rule ID and a concise, quoted reason. Suppressions apply only to the next line.",
+        file,
+        line,
+        excerpt: source.trim().slice(0, 180)
     };
 }
 function policyFindings(policy, line, file, lineNumber) {

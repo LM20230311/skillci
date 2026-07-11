@@ -2040,6 +2040,7 @@ var RULES = [
 var SKIPPED_DIRECTORIES = /* @__PURE__ */ new Set([".git", "node_modules", "dist", "coverage"]);
 var TEXT_EXTENSIONS = /* @__PURE__ */ new Set([".md", ".txt", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts", ".json", ".yml", ".yaml"]);
 var SEVERITY_WEIGHT = { critical: 4, high: 3, medium: 2, low: 1 };
+var KNOWN_RULE_IDS = /* @__PURE__ */ new Set([...RULES.map((rule) => rule.ruleId), "SKILLCI101", "SKILLCI102", "SKILLCI103", "SKILLCI104", "SKILLCI105"]);
 function audit(targetPath, options = {}) {
   const absoluteTarget = resolve2(targetPath);
   if (!existsSync2(absoluteTarget)) {
@@ -2048,30 +2049,54 @@ function audit(targetPath, options = {}) {
   const policy = options.policyPath ? loadPolicy(options.policyPath) : void 0;
   const files = collectFiles(absoluteTarget).filter((file) => file !== policy?.path);
   const findings = [];
+  const suppressedFindings = [];
   for (const file of files) {
     const content = readFileSync2(file, "utf8");
     const lines = content.split(/\r?\n/);
+    let nextLineSuppression;
     lines.forEach((line, index) => {
+      const relativeFile = relative(absoluteTarget, file) || file;
+      const directive = parseSuppressionDirective(line);
+      if (directive) {
+        if ("error" in directive) {
+          findings.push(invalidSuppressionFinding(directive.error, relativeFile, index + 1, line));
+          nextLineSuppression = void 0;
+        } else {
+          nextLineSuppression = directive;
+        }
+        return;
+      }
+      const lineFindings = [];
       for (const rule of RULES) {
         rule.pattern.lastIndex = 0;
         if (!rule.pattern.test(line))
           continue;
-        findings.push({
+        lineFindings.push({
           ...withoutPattern(rule),
-          file: relative(absoluteTarget, file) || file,
+          file: relativeFile,
           line: index + 1,
           excerpt: line.trim().slice(0, 180)
         });
       }
       if (policy)
-        findings.push(...policyFindings(policy, line, relative(absoluteTarget, file) || file, index + 1));
+        lineFindings.push(...policyFindings(policy, line, relativeFile, index + 1));
+      for (const finding of lineFindings) {
+        if (nextLineSuppression?.ruleIds.includes(finding.ruleId)) {
+          suppressedFindings.push({ ruleId: finding.ruleId, title: finding.title, file: finding.file, line: finding.line, excerpt: finding.excerpt, reason: nextLineSuppression.reason });
+        } else {
+          findings.push(finding);
+        }
+      }
+      nextLineSuppression = void 0;
     });
   }
   findings.sort((left, right) => SEVERITY_WEIGHT[right.severity] - SEVERITY_WEIGHT[left.severity] || left.file.localeCompare(right.file) || left.line - right.line);
+  suppressedFindings.sort((left, right) => left.file.localeCompare(right.file) || left.line - right.line || left.ruleId.localeCompare(right.ruleId));
   return {
     target: absoluteTarget,
     scannedFiles: files.length,
     findings,
+    suppressedFindings,
     score: score(findings),
     policy: policy && {
       path: policy.path,
@@ -2082,6 +2107,33 @@ function audit(targetPath, options = {}) {
       deniedCommandPatterns: policy.deniedCommandPatterns,
       deniedWorkingDirectories: policy.deniedWorkingDirectories
     }
+  };
+}
+function parseSuppressionDirective(line) {
+  if (!/skillci:ignore-next-line/i.test(line))
+    return void 0;
+  const match2 = line.match(/skillci:ignore-next-line\s+([A-Z0-9_,\s-]+?)\s+--reason\s+(["'])(.*?)\2/i);
+  if (!match2)
+    return { error: 'Invalid suppression. Use skillci:ignore-next-line SKILLCI004 --reason "reviewed reason".' };
+  const ruleIds = match2[1].split(",").map((ruleId) => ruleId.trim().toUpperCase()).filter(Boolean);
+  const reason = match2[3].trim();
+  if (ruleIds.length === 0 || !reason)
+    return { error: "A suppression requires at least one rule ID and a non-empty quoted reason." };
+  const unknown = ruleIds.filter((ruleId) => !KNOWN_RULE_IDS.has(ruleId));
+  if (unknown.length > 0)
+    return { error: `Suppression references unknown rule IDs: ${unknown.join(", ")}.` };
+  return { ruleIds, reason };
+}
+function invalidSuppressionFinding(detail, file, line, source) {
+  return {
+    ruleId: "SKILLCI106",
+    severity: "high",
+    title: "Invalid suppression directive",
+    detail,
+    remediation: "Use an exact existing rule ID and a concise, quoted reason. Suppressions apply only to the next line.",
+    file,
+    line,
+    excerpt: source.trim().slice(0, 180)
   };
 }
 function policyFindings(policy, line, file, lineNumber) {
@@ -2375,6 +2427,7 @@ function renderMarkdown(result) {
     `- **Target:** \`${result.target}\``,
     `- **Files scanned:** ${result.scannedFiles}`,
     `- **Findings:** ${result.findings.length}`,
+    `- **Suppressed findings:** ${result.suppressedFindings.length}`,
     `- **Risk score:** ${badge(result.score)}`
   ].join("\n");
   const policy = result.policy ? `
@@ -2382,8 +2435,8 @@ function renderMarkdown(result) {
   if (result.findings.length === 0) {
     return `${heading}${summary}${policy}
 
-\u2705 No findings detected by the current rule set.
-`;
+\u2705 No active findings detected by the current rule set.
+${renderSuppressions(result.suppressedFindings)}`;
   }
   const rows = result.findings.map((finding) => `| ${badge(finding.severity)} | \`${finding.ruleId}\` | ${finding.title} | \`${finding.file}:${finding.line}\` |`).join("\n");
   const details = result.findings.map(renderDetail).join("\n\n");
@@ -2398,15 +2451,28 @@ ${rows}
 ## How to fix
 
 ${details}
-`;
+${renderSuppressions(result.suppressedFindings)}`;
 }
 function renderGitHubAnnotations(result) {
   const annotations = result.findings.map((finding) => {
     const level = finding.severity === "critical" || finding.severity === "high" ? "error" : "warning";
     return `::${level} file=${escapeGitHub(finding.file)},line=${finding.line},title=${finding.ruleId} ${escapeGitHub(finding.title)}::${escapeGitHub(finding.detail)}`;
   });
-  const summary = `::notice title=SkillCI audit::${result.findings.length} finding(s); risk score: ${result.score}.`;
-  return [...annotations, summary].join("\n");
+  const suppressions = result.suppressedFindings.map((finding) => `::notice file=${escapeGitHub(finding.file)},line=${finding.line},title=${finding.ruleId} suppressed::${escapeGitHub(finding.reason)}`);
+  const summary = `::notice title=SkillCI audit::${result.findings.length} active finding(s), ${result.suppressedFindings.length} suppressed; risk score: ${result.score}.`;
+  return [...annotations, ...suppressions, summary].join("\n");
+}
+function renderSuppressions(suppressedFindings) {
+  if (suppressedFindings.length === 0)
+    return "";
+  const rows = suppressedFindings.map((finding) => `| \`${finding.ruleId}\` | ${finding.title} | \`${finding.file}:${finding.line}\` | ${finding.reason} |`).join("\n");
+  return `
+## Suppressed findings
+
+| Rule | Finding | Location | Reviewed reason |
+| --- | --- | --- | --- |
+${rows}
+`;
 }
 function renderDetail(finding) {
   return [

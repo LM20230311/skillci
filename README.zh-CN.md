@@ -57,6 +57,7 @@ SkillCI 在合并或安装前给团队一个可审查的答案：**这个 Skill 
 | 违反项目策略 | 禁止的网络、路径或命令 | `SKILLCI101–103` |
 | 未获批准的网络主机 | 不在 `allow.network` 中的主机 | `SKILLCI104` |
 | 被禁止的工作目录 | 策略禁止的 `cd` 或 `--cwd` 路径 | `SKILLCI105` |
+| 无效的抑制指令 | 缺少理由、规则不存在或指令格式错误 | `SKILLCI106` |
 
 SkillCI 有意采取保守策略：它会标记值得审查的模式，但**不会**声称仅靠静态分析就能证明一个 Skill 绝对安全。
 
@@ -161,6 +162,24 @@ skillci policy check skillci/policy.yml
 
 可复制的文档、发布和基础设施策略示例位于 [`examples/policies`](examples/policies)。
 
+### 添加经过审查的例外，而不隐藏它
+
+有些发现是有意为之。只抑制紧随其后的那一行上的精确规则，并向审阅者说明理由：
+
+```md
+<!-- skillci:ignore-next-line SKILLCI004 --reason "This release check calls the documented GitHub API endpoint." -->
+fetch("https://api.github.com/repos/LM20230311/skillci/releases/latest");
+```
+
+同一指令也可以写在 shell 风格注释中：
+
+```bash
+# skillci:ignore-next-line SKILLCI004 --reason "This release check calls the documented GitHub API endpoint."
+curl https://api.github.com/repos/LM20230311/skillci/releases/latest
+```
+
+SkillCI 仍会在 Markdown 与 GitHub Actions 输出中报告这条抑制、所在位置和审查理由。它不会抑制同一行上的其他规则。缺少理由、未知规则 ID 或格式错误的指令会产生一条活动的 `SKILLCI106` 发现。可运行示例见 [`examples/suppressions`](examples/suppressions)。
+
 ## 接入 CI
 
 在拥有 Skill 的仓库中，加入以下 GitHub Actions 工作流：
@@ -256,12 +275,12 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 - [x] 静态审计规则，以及 Markdown、JSON、GitHub annotation 报告
 - [x] 版本控制的路径 glob、网络主机 allowlist、命令模式与工作目录边界
 - [x] `skillci policy check` 会拒绝无效或互相矛盾的策略语法
+- [x] 必须填写理由、且仍会在报告中展示的内联抑制机制
 - [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
 - [x] Composite GitHub Action
 
 ### 下一步
 
-- [ ] 带必填理由、可审查的抑制与豁免机制
 - [ ] 清晰展示新增权限请求的策略 diff
 - [ ] 在隔离沙箱中运行基于 fixture 的行为测试
 - [ ] 适配 Codex、Claude Code、Cursor 与 GitHub Copilot 的约定

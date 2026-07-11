@@ -29,6 +29,8 @@ The current implementation is a dependency-light TypeScript CLI and composite Gi
 - Prefer TypeScript with Node standard-library APIs. Add a runtime dependency only when it materially improves correctness or safety.
 - Keep rule IDs stable once released. New rules need a test, a clear remediation message, and README coverage when user-visible.
 - Policy matching must be deterministic and explainable. Avoid silently weakening a policy on parse errors.
+- Use `skillci:ignore-next-line` only for a reviewed, narrow exception. It must name the exact existing rule and include a concise quoted `--reason`; never remove or weaken a detection rule merely to hide a finding.
+- Suppressions must remain visible in reports. Do not add a mechanism that silently excludes a file, directory, or rule from audit output.
 - Do not execute an untrusted Skill while developing a static rule. Behavior tests must use an explicitly isolated fixture strategy.
 - Preserve the CLI's documented exit-code behavior: high/critical audit findings and failed cases should fail by default; `--no-fail` must remain an explicit opt-out.
 

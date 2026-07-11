@@ -57,6 +57,7 @@ SkillCI gives the team a reviewable answer before merge or installation: **what 
 | Policy violations | denied network, path, or command | `SKILLCI101–103` |
 | Unapproved network host | a host outside `allow.network` | `SKILLCI104` |
 | Denied working directory | a `cd` or `--cwd` path that policy forbids | `SKILLCI105` |
+| Invalid suppression | missing reason, unknown rule, or malformed directive | `SKILLCI106` |
 
 SkillCI is intentionally conservative. It flags patterns that deserve review; it does **not** claim that static analysis alone proves a Skill safe.
 
@@ -161,6 +162,24 @@ skillci policy check skillci/policy.yml
 
 Copyable documentation, release, and infrastructure examples are available in [`examples/policies`](examples/policies).
 
+### Add a reviewed exception without hiding it
+
+Sometimes a finding is intentional. Suppress only the exact rule on the immediately following line, and give reviewers a reason:
+
+```md
+<!-- skillci:ignore-next-line SKILLCI004 --reason "This release check calls the documented GitHub API endpoint." -->
+fetch("https://api.github.com/repos/LM20230311/skillci/releases/latest");
+```
+
+The same directive works in shell-style comments:
+
+```bash
+# skillci:ignore-next-line SKILLCI004 --reason "This release check calls the documented GitHub API endpoint."
+curl https://api.github.com/repos/LM20230311/skillci/releases/latest
+```
+
+SkillCI still reports the suppression, its location, and its reviewed reason in Markdown and GitHub Actions output. It never suppresses a different rule on that line. Missing reasons, unknown rule IDs, and malformed directives produce an active `SKILLCI106` finding. See a runnable example in [`examples/suppressions`](examples/suppressions).
+
 ## Make it part of CI
 
 Once you publish a release, add this to a workflow in the repository that owns the Skills:
@@ -256,6 +275,7 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 - [x] Static audit rules and Markdown, JSON, and GitHub annotation reports
 - [x] Version-controlled path globs, network host allowlists, command patterns, and working-directory boundaries
 - [x] `skillci policy check` fails closed on invalid or contradictory policy syntax
+- [x] Inline, reason-required suppressions that remain visible in audit reports
 - [x] YAML regression cases for maximum risk and forbidden rules
 - [x] Composite GitHub Action
 

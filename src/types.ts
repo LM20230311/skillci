@@ -11,10 +11,15 @@ export type Finding = {
   excerpt: string;
 };
 
+export type SuppressedFinding = Pick<Finding, "ruleId" | "title" | "file" | "line" | "excerpt"> & {
+  reason: string;
+};
+
 export type AuditResult = {
   target: string;
   scannedFiles: number;
   findings: Finding[];
+  suppressedFindings: SuppressedFinding[];
   score: "critical" | "high" | "medium" | "low" | "none";
   policy?: {
     path: string;
