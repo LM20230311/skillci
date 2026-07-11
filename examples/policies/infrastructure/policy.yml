@@ -1,0 +1,12 @@
+# Infrastructure Skills require a deliberately narrow review boundary.
+allow:
+  network:
+    - api.github.com
+deny:
+  paths:
+    - .env
+    - infra/prod/**
+    - **/*.tfstate
+  commands:
+    - terraform apply
+    - kubectl delete

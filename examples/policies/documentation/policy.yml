@@ -1,0 +1,10 @@
+# Documentation Skills should not need credentials, deployments, or network access.
+deny:
+  network: true
+  paths:
+    - .env
+    - ~/.ssh/**
+    - **/*.pem
+  commands:
+    - git push --force
+    - rm -rf

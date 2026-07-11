@@ -6,7 +6,7 @@ This file governs all AI-assisted work in this repository. Keep changes small, e
 
 SkillCI is a safety and regression tool for AI Agent Skills. It helps users review risky instructions, enforce policies, and run repeatable checks. Do not represent static analysis as a complete security boundary or a sandbox.
 
-The current implementation is a dependency-light TypeScript CLI and composite GitHub Action. The Action executes checked-in `dist/` code, so source and generated output must always remain synchronized.
+The current implementation is a dependency-light TypeScript CLI and composite GitHub Action. The Action executes the checked-in self-contained bundle at `dist/action/index.js`, so source and generated output must always remain synchronized.
 
 ## Required reading and planning
 

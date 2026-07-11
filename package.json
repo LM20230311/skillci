@@ -21,13 +21,17 @@
     "LICENSE"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && esbuild dist/index.js --bundle --platform=node --format=esm --target=node20 --outfile=dist/action/index.js --sourcemap",
     "clean": "rm -rf dist",
     "test": "npm run build && node --test dist/**/*.test.js",
     "check": "npm run build"
   },
+  "dependencies": {
+    "minimatch": "^10.2.5"
+  },
   "devDependencies": {
     "@types/node": "^22.15.3",
+    "esbuild": "^0.28.1",
     "typescript": "^5.8.3"
   },
   "engines": {

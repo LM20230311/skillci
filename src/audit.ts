@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { relative, resolve } from "node:path";
-import { loadPolicy, type Policy } from "./policy.js";
+import { extractNetworkHosts, hostIsAllowed, loadPolicy, matchesDeniedPath, type Policy } from "./policy.js";
 import type { AuditResult, Finding, Severity } from "./types.js";
 
 type Rule = Omit<Finding, "file" | "line" | "excerpt"> & { pattern: RegExp };
@@ -97,6 +97,7 @@ export function audit(targetPath: string, options: { policyPath?: string } = {})
     policy: policy && {
       path: policy.path,
       deniedNetwork: policy.deniedNetwork,
+      allowedHosts: policy.allowedHosts,
       deniedPaths: policy.deniedPaths,
       deniedCommands: policy.deniedCommands
     }
@@ -106,7 +107,8 @@ export function audit(targetPath: string, options: { policyPath?: string } = {})
 function policyFindings(policy: Policy, line: string, file: string, lineNumber: number): Finding[] {
   const findings: Finding[] = [];
   const excerpt = line.trim().slice(0, 180);
-  if (policy.deniedNetwork && RULES.find((rule) => rule.ruleId === "SKILLCI004")!.pattern.test(line)) {
+  const networkAccess = RULES.find((rule) => rule.ruleId === "SKILLCI004")!.pattern.test(line);
+  if (policy.deniedNetwork && networkAccess) {
     findings.push({
       ruleId: "SKILLCI101",
       severity: "high",
@@ -118,9 +120,26 @@ function policyFindings(policy: Policy, line: string, file: string, lineNumber: 
       excerpt
     });
   }
+  if (!policy.deniedNetwork && policy.allowedHosts.length > 0 && networkAccess) {
+    const hosts = extractNetworkHosts(line);
+    const unapprovedHosts = hosts.filter((host) => !hostIsAllowed(host, policy.allowedHosts));
+    if (hosts.length === 0 || unapprovedHosts.length > 0) {
+      findings.push({
+        ruleId: "SKILLCI104",
+        severity: "high",
+        title: "Network host is not allowlisted",
+        detail: hosts.length === 0
+          ? "This instruction makes a network request, but SkillCI could not identify a host to compare with allow.network."
+          : `This instruction contacts ${unapprovedHosts.join(", ")}, which is not covered by allow.network.`,
+        remediation: "Use an approved host, or update allow.network with a reviewed hostname pattern.",
+        file,
+        line: lineNumber,
+        excerpt
+      });
+    }
+  }
   for (const deniedPath of policy.deniedPaths) {
-    const needle = deniedPath.replace(/\*+$/, "").replace(/\/$/, "");
-    if (needle && line.includes(needle)) {
+    if (matchesDeniedPath(line, deniedPath)) {
       findings.push({
         ruleId: "SKILLCI102",
         severity: "high",

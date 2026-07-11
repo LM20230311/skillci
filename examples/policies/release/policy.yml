@@ -1,0 +1,11 @@
+# A release Skill may call the package registry and GitHub API, but nowhere else.
+allow:
+  network:
+    - api.github.com
+    - registry.npmjs.org
+deny:
+  paths:
+    - .env
+    - ~/.ssh/**
+  commands:
+    - git push --force

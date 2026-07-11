@@ -17,6 +17,7 @@ export type AuditResult = {
     policy?: {
         path: string;
         deniedNetwork: boolean;
+        allowedHosts: string[];
         deniedPaths: string[];
         deniedCommands: string[];
     };

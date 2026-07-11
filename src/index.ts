@@ -3,6 +3,7 @@ import { writeFileSync } from "node:fs";
 import { audit } from "./audit.js";
 import { renderTestRun, runCases } from "./cases.js";
 import { initialize } from "./init.js";
+import { renderPolicyValidation, validatePolicy } from "./policy.js";
 import { renderGitHubAnnotations, renderMarkdown } from "./report.js";
 import type { ReportFormat } from "./types.js";
 
@@ -13,6 +14,7 @@ Usage:
   skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
+  skillci policy check <file> [--format markdown|json]
 
 Examples:
   skillci init
@@ -20,6 +22,7 @@ Examples:
   skillci audit .github/skills/release --policy skillci/policy.yml
   skillci audit . --format github
   skillci test skillci/cases
+  skillci policy check skillci/policy.yml
   skillci report .github/skills/release --output skillci-report.md
 `;
 
@@ -45,6 +48,19 @@ async function main(argv: string[]): Promise<void> {
     if (format !== "markdown" && format !== "json") throw new Error(`Unsupported test format: ${format}`);
     console.log(format === "json" ? JSON.stringify(testRun, null, 2) : renderTestRun(testRun));
     if (testRun.results.some((result) => !result.passed) && !args.includes("--no-fail")) process.exitCode = 1;
+    return;
+  }
+
+  if (command === "policy") {
+    const [subcommand, ...policyArgs] = args;
+    if (subcommand !== "check") throw new Error("policy supports the check subcommand.");
+    const policyPath = policyArgs.find((argument) => !argument.startsWith("-"));
+    if (!policyPath) throw new Error("policy check requires a policy file.");
+    const format = option(policyArgs, "--format") ?? "markdown";
+    if (format !== "markdown" && format !== "json") throw new Error(`Unsupported policy format: ${format}`);
+    const validation = validatePolicy(policyPath);
+    console.log(format === "json" ? JSON.stringify(validation, null, 2) : renderPolicyValidation(validation));
+    if (!validation.valid) process.exitCode = 1;
     return;
   }
 

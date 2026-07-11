@@ -55,6 +55,7 @@ SkillCI gives the team a reviewable answer before merge or installation: **what 
 | History rewriting | `git push --force`, `git reset --hard` | `SKILLCI005` |
 | Workspace escape | `../`, `/Users/`, `/home/` | `SKILLCI006` |
 | Policy violations | denied network, path, or command | `SKILLCI101–103` |
+| Unapproved network host | a host outside `allow.network` | `SKILLCI104` |
 
 SkillCI is intentionally conservative. It flags patterns that deserve review; it does **not** claim that static analysis alone proves a Skill safe.
 
@@ -123,6 +124,29 @@ node dist/index.js audit .github/skills/release --policy skillci/policy.yml
 ```
 
 SkillCI reports both generic risks and policy-specific violations. For example, network use prohibited by policy becomes `SKILLCI101`.
+
+### Use globs and reviewed network hosts
+
+Path entries in `deny.paths` use glob matching, so `**/*.pem` matches certificates at any depth while `secrets/*.pem` does not match a file nested below `secrets/`.
+
+When a Skill needs network access, use a reviewed hostname allowlist instead of removing the boundary:
+
+```yaml
+allow:
+  network:
+    - api.github.com
+    - registry.npmjs.org
+```
+
+`deny.network: true` and `allow.network` cannot be combined. A host outside the allowlist is reported as `SKILLCI104`.
+
+Validate a policy before it reaches CI:
+
+```bash
+skillci policy check skillci/policy.yml
+```
+
+Copyable documentation, release, and infrastructure examples are available in [`examples/policies`](examples/policies).
 
 ## Make it part of CI
 
@@ -193,6 +217,9 @@ skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
 
 # Run a YAML case or a directory of cases.
 skillci test <cases-path> [--format markdown|json] [--no-fail]
+
+# Validate a policy before using it in CI.
+skillci policy check <file> [--format markdown|json]
 ```
 
 ## Why this project exists
@@ -212,15 +239,18 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 
 ### Available now
 
-- [x] Dependency-free TypeScript CLI
+- [x] Lightweight TypeScript CLI with a self-contained GitHub Action bundle
 - [x] Static audit rules and Markdown, JSON, and GitHub annotation reports
-- [x] Version-controlled `deny.network`, `deny.paths`, and `deny.commands` policies
+- [x] Version-controlled path globs, network host allowlists, and command-deny policies
+- [x] `skillci policy check` fails closed on invalid or contradictory policy syntax
 - [x] YAML regression cases for maximum risk and forbidden rules
 - [x] Composite GitHub Action
 
 ### Next
 
-- [ ] Glob-aware path policies and host allowlists
+- [ ] Command argument and working-directory constraints
+- [ ] Reviewed suppressions and exceptions with a required reason
+- [ ] Clear policy diffs that highlight newly requested permissions
 - [ ] Fixture-based behavior tests in an isolated sandbox
 - [ ] Adapters for Codex, Claude Code, Cursor, and GitHub Copilot conventions
 - [ ] A public corpus of unsafe and broken Skills

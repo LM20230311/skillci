@@ -24,7 +24,7 @@ runs:
           policy_args=(--policy "${{ inputs.policy }}")
         fi
         if [ "${{ inputs.fail-on-risk }}" = "true" ]; then
-          node "$GITHUB_ACTION_PATH/dist/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github
+          node "$GITHUB_ACTION_PATH/dist/action/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github
         else
-          node "$GITHUB_ACTION_PATH/dist/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github --no-fail
+          node "$GITHUB_ACTION_PATH/dist/action/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github --no-fail
         fi

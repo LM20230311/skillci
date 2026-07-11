@@ -55,6 +55,7 @@ SkillCI 在合并或安装前给团队一个可审查的答案：**这个 Skill 
 | 改写 Git 历史 | `git push --force`、`git reset --hard` | `SKILLCI005` |
 | 越出工作区 | `../`、`/Users/`、`/home/` | `SKILLCI006` |
 | 违反项目策略 | 禁止的网络、路径或命令 | `SKILLCI101–103` |
+| 未获批准的网络主机 | 不在 `allow.network` 中的主机 | `SKILLCI104` |
 
 SkillCI 有意采取保守策略：它会标记值得审查的模式，但**不会**声称仅靠静态分析就能证明一个 Skill 绝对安全。
 
@@ -123,6 +124,29 @@ node dist/index.js audit .github/skills/release --policy skillci/policy.yml
 ```
 
 SkillCI 会同时报告通用风险和策略违规。例如，当策略禁止网络访问时，网络调用会额外触发 `SKILLCI101`。
+
+### 使用 glob 与经过审查的网络主机
+
+`deny.paths` 中的路径条目使用 glob 匹配：`**/*.pem` 会匹配任意层级的证书文件，而 `secrets/*.pem` 不会匹配 `secrets/` 下更深层的文件。
+
+当 Skill 确实需要联网时，应使用经过审查的主机 allowlist，而不是取消边界：
+
+```yaml
+allow:
+  network:
+    - api.github.com
+    - registry.npmjs.org
+```
+
+`deny.network: true` 不能与 `allow.network` 同时使用。allowlist 外的主机会报告为 `SKILLCI104`。
+
+在策略进入 CI 前先验证它：
+
+```bash
+skillci policy check skillci/policy.yml
+```
+
+可复制的文档、发布和基础设施策略示例位于 [`examples/policies`](examples/policies)。
 
 ## 接入 CI
 
@@ -193,6 +217,9 @@ skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
 
 # 运行一个 YAML 案例或一个案例目录。
 skillci test <cases-path> [--format markdown|json] [--no-fail]
+
+# 在策略进入 CI 前验证它。
+skillci policy check <file> [--format markdown|json]
 ```
 
 ## 为什么要做这个项目
@@ -212,15 +239,18 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 
 ### 已提供
 
-- [x] 无运行时依赖的 TypeScript CLI
+- [x] 轻量 TypeScript CLI，以及可独立运行的 GitHub Action bundle
 - [x] 静态审计规则，以及 Markdown、JSON、GitHub annotation 报告
-- [x] 版本控制的 `deny.network`、`deny.paths` 和 `deny.commands` 策略
+- [x] 版本控制的路径 glob、网络主机 allowlist 和命令禁止策略
+- [x] `skillci policy check` 会拒绝无效或互相矛盾的策略语法
 - [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
 - [x] Composite GitHub Action
 
 ### 下一步
 
-- [ ] 支持 glob 语义的路径策略与网络主机 allowlist
+- [ ] 命令参数与工作目录约束
+- [ ] 带必填理由、可审查的抑制与豁免机制
+- [ ] 清晰展示新增权限请求的策略 diff
 - [ ] 在隔离沙箱中运行基于 fixture 的行为测试
 - [ ] 适配 Codex、Claude Code、Cursor 与 GitHub Copilot 的约定
 - [ ] 建立公开的危险与失效 Skill 样本库

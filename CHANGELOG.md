@@ -7,6 +7,7 @@ All notable changes to SkillCI are recorded in this file.
 ### Added
 
 - Simplified Chinese README and a repository-level agent contribution guide.
+- `skillci policy check`, glob-aware path denies, `allow.network` host allowlists, and three policy examples.
 
 ### Changed
 
