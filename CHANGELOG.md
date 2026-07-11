@@ -2,6 +2,13 @@
 
 All notable changes to SkillCI are recorded in this file.
 
+## [0.3.2] - 2026-07-11
+
+### Added
+
+- First public npm distribution of the `skillci` CLI, including `npx skillci` usage.
+- npm installation and one-off execution guidance in both README languages.
+
 ## [0.3.1] - 2026-07-11
 
 ### Fixed

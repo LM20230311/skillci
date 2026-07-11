@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/LM20230311/skillci/actions/workflows/ci.yml"><img src="https://github.com/LM20230311/skillci/actions/workflows/ci.yml/badge.svg" alt="CI 状态" /></a>
+  <a href="https://www.npmjs.com/package/skillci"><img src="https://img.shields.io/npm/v/skillci.svg" alt="npm 版本" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT 许可证" /></a>
   <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js" alt="Node.js 20 或更高版本" /></a>
 </p>
@@ -86,6 +87,23 @@ Risk score: CRITICAL
 ```
 
 高风险与严重风险默认以退出码 `1` 结束，因此可直接让 CI 失败。仅想生成报告而不阻断当前命令时，加入 `--no-fail`。
+
+## 从 npm 安装
+
+在拥有 Skills 的仓库中，将 SkillCI 安装为开发依赖：
+
+```bash
+npm install --save-dev skillci
+npx skillci audit .github/skills
+```
+
+如果只是临时检查，无需安装：
+
+```bash
+npx skillci@0.3.2 audit .github/skills
+```
+
+在 GitHub Actions 工作流中继续使用 `LM20230311/skillci@v0.3.2`。
 
 ## 三分钟上手
 
@@ -180,7 +198,7 @@ SkillCI 会将新增限制与**权限扩大**分开显示。新增 `allow.networ
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.3.1
+- uses: LM20230311/skillci@v0.3.2
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -223,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.3.1
+      - uses: LM20230311/skillci@v0.3.2
         with:
           path: .github/skills
           policy: skillci/policy.yml

@@ -7,6 +7,7 @@
 
 <p align="center">
   <a href="https://github.com/LM20230311/skillci/actions/workflows/ci.yml"><img src="https://github.com/LM20230311/skillci/actions/workflows/ci.yml/badge.svg" alt="CI status" /></a>
+  <a href="https://www.npmjs.com/package/skillci"><img src="https://img.shields.io/npm/v/skillci.svg" alt="npm version" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT license" /></a>
   <a href="package.json"><img src="https://img.shields.io/badge/node-%3E%3D20-339933?logo=node.js" alt="Node.js 20 or later" /></a>
 </p>
@@ -86,6 +87,23 @@ Risk score: CRITICAL
 ```
 
 High and critical findings exit with code `1`, so they fail a CI check by default. Add `--no-fail` when you want a report without blocking the current command.
+
+## Install from npm
+
+Install SkillCI as a development dependency in the repository that owns your Skills:
+
+```bash
+npm install --save-dev skillci
+npx skillci audit .github/skills
+```
+
+For a one-off check, no installation is needed:
+
+```bash
+npx skillci@0.3.2 audit .github/skills
+```
+
+Use `LM20230311/skillci@v0.3.2` when adding the GitHub Action to a workflow.
 
 ## Get started in three minutes
 
@@ -180,7 +198,7 @@ The GitHub Action can annotate those expansions when the workflow checks out the
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.3.1
+- uses: LM20230311/skillci@v0.3.2
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -223,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.3.1
+      - uses: LM20230311/skillci@v0.3.2
         with:
           path: .github/skills
           policy: skillci/policy.yml
