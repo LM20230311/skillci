@@ -3,7 +3,7 @@
 > 这份文件是 SkillCI 的单一迭代记录。每次开发开始前确认当前阶段；每次合并或发布后更新状态、验收结果、版本和下一步。
 
 **当前阶段：** Phase 3 — 隔离行为测试
-**当前版本：** `v0.3.0`（待 CI 验证后发布）
+**当前版本：** `v0.3.0`
 **最后更新：** 2026-07-11
 
 ## 产品北极星
@@ -85,6 +85,7 @@
 | --- | --- | --- |
 | 2026-07-11 | `v0.1.0` | 首次公开发布：静态审计、策略、回归案例与 GitHub Action。 |
 | 2026-07-11 | `v0.2.0` | Phase 2 发布：glob、网络主机 allowlist、命令与工作目录策略、可审查抑制和策略 diff。 |
+| 2026-07-11 | `v0.3.0` | Phase 3 发布：受限 Docker 行为 runner、文件断言与 CI 真实执行示例。 |
 
 ---
 
@@ -144,7 +145,7 @@
 - [x] 定义 fixture、prompt、runner、工具权限、退出码及文件期望的最小契约，并提供文档更新的可复制示例。
 - [x] 新增 `skillci behavior run`：复制 fixture 后在 Docker 中运行，强制禁用网络、只读根文件系统、移除能力、禁止提权并限制资源。
 - [x] 对退出码、created/modified/unchanged 文件断言生成可审阅报告；CI 会真实运行文档更新示例。
-- [x] 完成 `v0.3.0` 发布候选：首个可复现的隔离行为 runner，等待远程 CI 后创建 tag 与 GitHub Release。
+- [x] 发布 `v0.3.0`：首个可复现的隔离行为 runner；远程 CI 已真实执行通过。
 
 ## GitHub Marketplace 上架计划
 
@@ -152,7 +153,7 @@
 
 上架前检查：
 
-- [ ] Action 的真实隔离执行用例通过 CI（等待 `v0.3.0` 提交的远程 CI）。
+- [x] Action 的真实隔离执行用例已通过 CI（[run 29148660933](https://github.com/LM20230311/skillci/actions/runs/29148660933)）。
 - [x] 已核对 `action.yml` 的 Marketplace 名称、描述和品牌信息。
 - [ ] 账户已接受 GitHub Marketplace Developer Agreement 并启用 2FA。
 - [ ] 以新的语义化 Release 在 GitHub UI 勾选 “Publish this Action to the GitHub Marketplace”。
