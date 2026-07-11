@@ -1,0 +1,30 @@
+name: SkillCI
+description: Audit AI agent skills for risky instructions and scripts.
+author: SkillCI contributors
+inputs:
+  path:
+    description: Skill or repository path to audit.
+    required: false
+    default: .
+  policy:
+    description: Optional path to a SkillCI policy file.
+    required: false
+    default: ""
+  fail-on-risk:
+    description: Fail when high or critical findings are present.
+    required: false
+    default: "true"
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      run: |
+        policy_args=()
+        if [ -n "${{ inputs.policy }}" ]; then
+          policy_args=(--policy "${{ inputs.policy }}")
+        fi
+        if [ "${{ inputs.fail-on-risk }}" = "true" ]; then
+          node "$GITHUB_ACTION_PATH/dist/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github
+        else
+          node "$GITHUB_ACTION_PATH/dist/index.js" audit "${{ inputs.path }}" "${policy_args[@]}" --format github --no-fail
+        fi

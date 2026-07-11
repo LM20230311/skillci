@@ -1,0 +1,44 @@
+{
+  "name": "skillci",
+  "version": "0.1.0",
+  "description": "Security audit and CI reporting for AI agent skills.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LM20230311/skillci.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LM20230311/skillci/issues"
+  },
+  "homepage": "https://github.com/LM20230311/skillci#readme",
+  "type": "module",
+  "bin": {
+    "skillci": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rm -rf dist",
+    "test": "npm run build && node --test dist/**/*.test.js",
+    "check": "npm run build"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.3",
+    "typescript": "^5.8.3"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "keywords": [
+    "ai-agents",
+    "agent-skills",
+    "mcp",
+    "security",
+    "cli",
+    "github-actions"
+  ]
+}
