@@ -9782,6 +9782,7 @@ function runBehaviorCase(casePath) {
   const workspace = (0, import_node_path3.join)(temporaryRoot, "workspace");
   try {
     (0, import_node_fs3.cpSync)(sourceFixture, workspace, { recursive: true });
+    makeWorkspaceWritable(workspace);
     const before = snapshotWorkspace(workspace);
     const process2 = (0, import_node_child_process.spawnSync)("docker", buildDockerArgs(workspace, behavior), {
       encoding: "utf8",
@@ -9933,6 +9934,16 @@ function snapshotWorkspace(root) {
     }
   }
   return files;
+}
+function makeWorkspaceWritable(root) {
+  (0, import_node_fs3.chmodSync)(root, 511);
+  for (const entry of (0, import_node_fs3.readdirSync)(root, { withFileTypes: true })) {
+    const path2 = (0, import_node_path3.join)(root, entry.name);
+    if (entry.isDirectory())
+      makeWorkspaceWritable(path2);
+    else if (entry.isFile())
+      (0, import_node_fs3.chmodSync)(path2, 438);
+  }
 }
 function evaluateAssertions(behavior, before, after, exitCode) {
   const assertions = [{ kind: "exit code", path: "process", passed: exitCode === behavior.expect.exitCode, detail: `Expected ${behavior.expect.exitCode}, received ${exitCode}.` }];

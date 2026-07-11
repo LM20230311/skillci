@@ -1,4 +1,4 @@
-import { cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, rmdirSync } from "node:fs";
+import { chmodSync, cpSync, existsSync, lstatSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, rmdirSync } from "node:fs";
 import { createHash } from "node:crypto";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
@@ -132,6 +132,7 @@ export function runBehaviorCase(casePath: string): BehaviorRun {
   const workspace = join(temporaryRoot, "workspace");
   try {
     cpSync(sourceFixture, workspace, { recursive: true });
+    makeWorkspaceWritable(workspace);
     const before = snapshotWorkspace(workspace);
     const process = spawnSync("docker", buildDockerArgs(workspace, behavior), {
       encoding: "utf8",
@@ -266,6 +267,15 @@ function snapshotWorkspace(root: string): Map<string, string> {
     }
   }
   return files;
+}
+
+function makeWorkspaceWritable(root: string): void {
+  chmodSync(root, 0o777);
+  for (const entry of readdirSync(root, { withFileTypes: true })) {
+    const path = join(root, entry.name);
+    if (entry.isDirectory()) makeWorkspaceWritable(path);
+    else if (entry.isFile()) chmodSync(path, 0o666);
+  }
 }
 
 function evaluateAssertions(behavior: BehaviorCase, before: Map<string, string>, after: Map<string, string>, exitCode: number): BehaviorAssertion[] {
