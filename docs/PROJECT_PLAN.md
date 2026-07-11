@@ -169,6 +169,7 @@
 - [x] `v0.3.2` GitHub Actions CI 已通过（[run 29149090315](https://github.com/LM20230311/skillci/actions/runs/29149090315)）。
 - [x] 创建 [v0.3.2 GitHub Release](https://github.com/LM20230311/skillci/releases/tag/v0.3.2)。
 - [x] 发布 `skillci@0.3.2` 到 npm 的 `latest` tag，并通过 `npm exec --yes --package=skillci@0.3.2 -- skillci --help` 完成独立安装验证。
+- [ ] 配置 npm Trusted Publishing：GitHub Release 自动触发 `publish-npm.yml`，使用 OIDC 发布 npm，作为下一个版本的发布验收项。
 
 ---
 
