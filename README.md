@@ -23,10 +23,26 @@ It is designed for Skills used with Codex, Claude Code, Cursor, GitHub Copilot, 
 
 **Planning and iteration:** see [the project plan](docs/PROJECT_PLAN.md).
 
+## Who is SkillCI for?
+
+| User | What SkillCI protects |
+| --- | --- |
+| **Skill authors** | Catch unsafe instructions before publishing or updating a Skill. |
+| **Developers who install Skills** | Inspect a third-party Skill before it can reach credentials, repositories, or external services. |
+| **Engineering and security teams** | Turn the team's Agent permissions into a pull-request check instead of an unwritten convention. |
+
+If you only use a chat assistant and never install, publish, or maintain Agent Skills, SkillCI is probably not for you. It is for people giving an AI agent access to a codebase or a workflow.
+
+## Why does a Skill need CI?
+
+A Skill is not passive documentation. It can tell an agent to read `.env`, run `curl | bash`, delete a directory, change Git history, or call an external service. When an agent has repository access and credentials, one seemingly small instruction change can become a real action.
+
 ```text
 Before SkillCI:    "This Skill looks useful. Ship it?"
 With SkillCI:     "This PR adds network access, reads .env, and force-pushes main. Block it."
 ```
+
+SkillCI gives the team a reviewable answer before merge or installation: **what is this Skill allowed to do, what changed, and should CI stop it?**
 
 ## What it catches today
 

@@ -8,6 +8,10 @@ All notable changes to SkillCI are recorded in this file.
 
 - Simplified Chinese README and a repository-level agent contribution guide.
 
+### Changed
+
+- Clarified the target users, risk model, and pre-merge decision value in both README languages.
+
 ## [0.1.0] - 2026-07-11
 
 ### Added
