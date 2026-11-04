@@ -3991,10 +3991,10 @@ var require_resolve_block_map = __commonJS({
       let offset = bm.offset;
       let commentEnd = null;
       for (const collItem of bm.items) {
-        const { start, key, sep: sep2, value } = collItem;
+        const { start, key, sep: sep3, value } = collItem;
         const keyProps = resolveProps.resolveProps(start, {
           indicator: "explicit-key-ind",
-          next: key ?? sep2?.[0],
+          next: key ?? sep3?.[0],
           offset,
           onError,
           parentIndent: bm.indent,
@@ -4008,7 +4008,7 @@ var require_resolve_block_map = __commonJS({
             else if ("indent" in key && key.indent !== bm.indent)
               onError(offset, "BAD_INDENT", startColMsg);
           }
-          if (!keyProps.anchor && !keyProps.tag && !sep2) {
+          if (!keyProps.anchor && !keyProps.tag && !sep3) {
             commentEnd = keyProps.end;
             if (keyProps.comment) {
               if (map.comment)
@@ -4032,7 +4032,7 @@ var require_resolve_block_map = __commonJS({
         ctx.atKey = false;
         if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
           onError(keyStart, "DUPLICATE_KEY", "Map keys must be unique");
-        const valueProps = resolveProps.resolveProps(sep2 ?? [], {
+        const valueProps = resolveProps.resolveProps(sep3 ?? [], {
           indicator: "map-value-ind",
           next: value,
           offset: keyNode.range[2],
@@ -4048,7 +4048,7 @@ var require_resolve_block_map = __commonJS({
             if (ctx.options.strict && keyProps.start < valueProps.found.offset - 1024)
               onError(keyNode.range, "KEY_OVER_1024_CHARS", "The : indicator must be at most 1024 chars after the start of an implicit block mapping key");
           }
-          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : composeEmptyNode(ctx, offset, sep2, null, valueProps, onError);
+          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : composeEmptyNode(ctx, offset, sep3, null, valueProps, onError);
           if (ctx.schema.compat)
             utilFlowIndentCheck.flowIndentCheck(bm.indent, value, onError);
           offset = valueNode.range[2];
@@ -4139,7 +4139,7 @@ var require_resolve_end = __commonJS({
       let comment = "";
       if (end) {
         let hasSpace = false;
-        let sep2 = "";
+        let sep3 = "";
         for (const token of end) {
           const { source, type } = token;
           switch (type) {
@@ -4153,13 +4153,13 @@ var require_resolve_end = __commonJS({
               if (!comment)
                 comment = cb;
               else
-                comment += sep2 + cb;
-              sep2 = "";
+                comment += sep3 + cb;
+              sep3 = "";
               break;
             }
             case "newline":
               if (comment)
-                sep2 += source;
+                sep3 += source;
               hasSpace = true;
               break;
             default:
@@ -4202,18 +4202,18 @@ var require_resolve_flow_collection = __commonJS({
       let offset = fc.offset + fc.start.source.length;
       for (let i = 0; i < fc.items.length; ++i) {
         const collItem = fc.items[i];
-        const { start, key, sep: sep2, value } = collItem;
+        const { start, key, sep: sep3, value } = collItem;
         const props = resolveProps.resolveProps(start, {
           flow: fcName,
           indicator: "explicit-key-ind",
-          next: key ?? sep2?.[0],
+          next: key ?? sep3?.[0],
           offset,
           onError,
           parentIndent: fc.indent,
           startOnNewline: false
         });
         if (!props.found) {
-          if (!props.anchor && !props.tag && !sep2 && !value) {
+          if (!props.anchor && !props.tag && !sep3 && !value) {
             if (i === 0 && props.comma)
               onError(props.comma, "UNEXPECTED_TOKEN", `Unexpected , in ${fcName}`);
             else if (i < fc.items.length - 1)
@@ -4267,8 +4267,8 @@ var require_resolve_flow_collection = __commonJS({
             }
           }
         }
-        if (!isMap && !sep2 && !props.found) {
-          const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep2, null, props, onError);
+        if (!isMap && !sep3 && !props.found) {
+          const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep3, null, props, onError);
           coll.items.push(valueNode);
           offset = valueNode.range[2];
           if (isBlock(value))
@@ -4280,7 +4280,7 @@ var require_resolve_flow_collection = __commonJS({
           if (isBlock(key))
             onError(keyNode.range, "BLOCK_IN_FLOW", blockMsg);
           ctx.atKey = false;
-          const valueProps = resolveProps.resolveProps(sep2 ?? [], {
+          const valueProps = resolveProps.resolveProps(sep3 ?? [], {
             flow: fcName,
             indicator: "map-value-ind",
             next: value,
@@ -4291,8 +4291,8 @@ var require_resolve_flow_collection = __commonJS({
           });
           if (valueProps.found) {
             if (!isMap && !props.found && ctx.options.strict) {
-              if (sep2)
-                for (const st of sep2) {
+              if (sep3)
+                for (const st of sep3) {
                   if (st === valueProps.found)
                     break;
                   if (st.type === "newline") {
@@ -4309,7 +4309,7 @@ var require_resolve_flow_collection = __commonJS({
             else
               onError(valueProps.start, "MISSING_CHAR", `Missing , or : between ${fcName} items`);
           }
-          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : valueProps.found ? composeEmptyNode(ctx, valueProps.end, sep2, null, valueProps, onError) : null;
+          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : valueProps.found ? composeEmptyNode(ctx, valueProps.end, sep3, null, valueProps, onError) : null;
           if (valueNode) {
             if (isBlock(value))
               onError(valueNode.range, "BLOCK_IN_FLOW", blockMsg);
@@ -4489,7 +4489,7 @@ var require_resolve_block_scalar = __commonJS({
           chompStart = i + 1;
       }
       let value = "";
-      let sep2 = "";
+      let sep3 = "";
       let prevMoreIndented = false;
       for (let i = 0; i < contentStart; ++i)
         value += lines[i][0].slice(trimIndent) + "\n";
@@ -4506,24 +4506,24 @@ var require_resolve_block_scalar = __commonJS({
           indent = "";
         }
         if (type === Scalar.Scalar.BLOCK_LITERAL) {
-          value += sep2 + indent.slice(trimIndent) + content;
-          sep2 = "\n";
+          value += sep3 + indent.slice(trimIndent) + content;
+          sep3 = "\n";
         } else if (indent.length > trimIndent || content[0] === "	") {
-          if (sep2 === " ")
-            sep2 = "\n";
-          else if (!prevMoreIndented && sep2 === "\n")
-            sep2 = "\n\n";
-          value += sep2 + indent.slice(trimIndent) + content;
-          sep2 = "\n";
+          if (sep3 === " ")
+            sep3 = "\n";
+          else if (!prevMoreIndented && sep3 === "\n")
+            sep3 = "\n\n";
+          value += sep3 + indent.slice(trimIndent) + content;
+          sep3 = "\n";
           prevMoreIndented = true;
         } else if (content === "") {
-          if (sep2 === "\n")
+          if (sep3 === "\n")
             value += "\n";
           else
-            sep2 = "\n";
+            sep3 = "\n";
         } else {
-          value += sep2 + content;
-          sep2 = " ";
+          value += sep3 + content;
+          sep3 = " ";
           prevMoreIndented = false;
         }
       }
@@ -4705,25 +4705,25 @@ var require_resolve_flow_scalar = __commonJS({
       if (!match2)
         return source;
       let res = match2[1];
-      let sep2 = " ";
+      let sep3 = " ";
       let pos = first.lastIndex;
       line.lastIndex = pos;
       while (match2 = line.exec(source)) {
         if (match2[1] === "") {
-          if (sep2 === "\n")
-            res += sep2;
+          if (sep3 === "\n")
+            res += sep3;
           else
-            sep2 = "\n";
+            sep3 = "\n";
         } else {
-          res += sep2 + match2[1];
-          sep2 = " ";
+          res += sep3 + match2[1];
+          sep3 = " ";
         }
         pos = line.lastIndex;
       }
       const last = /[ \t]*(.*)/sy;
       last.lastIndex = pos;
       match2 = last.exec(source);
-      return res + sep2 + (match2?.[1] ?? "");
+      return res + sep3 + (match2?.[1] ?? "");
     }
     function doubleQuotedValue(source, onError) {
       let res = "";
@@ -5533,14 +5533,14 @@ var require_cst_stringify = __commonJS({
         }
       }
     }
-    function stringifyItem({ start, key, sep: sep2, value }) {
+    function stringifyItem({ start, key, sep: sep3, value }) {
       let res = "";
       for (const st of start)
         res += st.source;
       if (key)
         res += stringifyToken(key);
-      if (sep2)
-        for (const st of sep2)
+      if (sep3)
+        for (const st of sep3)
           res += st.source;
       if (value)
         res += stringifyToken(value);
@@ -6707,18 +6707,18 @@ var require_parser = __commonJS({
         if (this.type === "map-value-ind") {
           const prev = getPrevProps(this.peek(2));
           const start = getFirstKeyStartProps(prev);
-          let sep2;
+          let sep3;
           if (scalar.end) {
-            sep2 = scalar.end;
-            sep2.push(this.sourceToken);
+            sep3 = scalar.end;
+            sep3.push(this.sourceToken);
             delete scalar.end;
           } else
-            sep2 = [this.sourceToken];
+            sep3 = [this.sourceToken];
           const map = {
             type: "block-map",
             offset: scalar.offset,
             indent: scalar.indent,
-            items: [{ start, key: scalar, sep: sep2 }]
+            items: [{ start, key: scalar, sep: sep3 }]
           };
           this.onKeyLine = true;
           this.stack[this.stack.length - 1] = map;
@@ -6871,15 +6871,15 @@ var require_parser = __commonJS({
                 } else if (isFlowToken(it.key) && !includesToken(it.sep, "newline")) {
                   const start2 = getFirstKeyStartProps(it.start);
                   const key = it.key;
-                  const sep2 = it.sep;
-                  sep2.push(this.sourceToken);
+                  const sep3 = it.sep;
+                  sep3.push(this.sourceToken);
                   delete it.key;
                   delete it.sep;
                   this.stack.push({
                     type: "block-map",
                     offset: this.offset,
                     indent: this.indent,
-                    items: [{ start: start2, key, sep: sep2 }]
+                    items: [{ start: start2, key, sep: sep3 }]
                   });
                 } else if (start.length > 0) {
                   it.sep = it.sep.concat(start, this.sourceToken);
@@ -6908,14 +6908,14 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs = this.flowScalar(this.type);
+              const fs2 = this.flowScalar(this.type);
               if (atNextItem || it.value) {
-                map.items.push({ start, key: fs, sep: [] });
+                map.items.push({ start, key: fs2, sep: [] });
                 this.onKeyLine = true;
               } else if (it.sep) {
-                this.stack.push(fs);
+                this.stack.push(fs2);
               } else {
-                Object.assign(it, { key: fs, sep: [] });
+                Object.assign(it, { key: fs2, sep: [] });
                 this.onKeyLine = true;
               }
               return;
@@ -7043,13 +7043,13 @@ var require_parser = __commonJS({
             case "scalar":
             case "single-quoted-scalar":
             case "double-quoted-scalar": {
-              const fs = this.flowScalar(this.type);
+              const fs2 = this.flowScalar(this.type);
               if (!it || it.value)
-                fc.items.push({ start: [], key: fs, sep: [] });
+                fc.items.push({ start: [], key: fs2, sep: [] });
               else if (it.sep)
-                this.stack.push(fs);
+                this.stack.push(fs2);
               else
-                Object.assign(it, { key: fs, sep: [] });
+                Object.assign(it, { key: fs2, sep: [] });
               return;
             }
             case "flow-map-end":
@@ -7073,13 +7073,13 @@ var require_parser = __commonJS({
             const prev = getPrevProps(parent);
             const start = getFirstKeyStartProps(prev);
             fixFlowSeqItems(fc);
-            const sep2 = fc.end.splice(1, fc.end.length);
-            sep2.push(this.sourceToken);
+            const sep3 = fc.end.splice(1, fc.end.length);
+            sep3.push(this.sourceToken);
             const map = {
               type: "block-map",
               offset: fc.offset,
               indent: fc.indent,
-              items: [{ start, key: fc, sep: sep2 }]
+              items: [{ start, key: fc, sep: sep3 }]
             };
             this.onKeyLine = true;
             this.stack[this.stack.length - 1] = map;
@@ -7358,7 +7358,7 @@ var require_dist = __commonJS({
 });
 
 // dist/index.js
-var import_node_fs6 = require("node:fs");
+var import_node_fs7 = require("node:fs");
 
 // dist/audit.js
 var import_node_fs2 = require("node:fs");
@@ -9454,7 +9454,7 @@ var RULES = [
   }
 ];
 var SKIPPED_DIRECTORIES = /* @__PURE__ */ new Set([".git", "node_modules", "dist", "coverage"]);
-var TEXT_EXTENSIONS = /* @__PURE__ */ new Set([".md", ".txt", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts", ".json", ".yml", ".yaml"]);
+var TEXT_EXTENSIONS = /* @__PURE__ */ new Set([".md", ".mdc", ".txt", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts", ".json", ".yml", ".yaml"]);
 var SEVERITY_WEIGHT = { critical: 4, high: 3, medium: 2, low: 1 };
 var KNOWN_RULE_IDS = /* @__PURE__ */ new Set([...RULES.map((rule) => rule.ruleId), "SKILLCI101", "SKILLCI102", "SKILLCI103", "SKILLCI104", "SKILLCI105"]);
 function audit(targetPath, options = {}) {
@@ -9671,7 +9671,7 @@ function collectFiles(target) {
 }
 function isTextFile(file) {
   const extension = file.includes(".") ? `.${file.split(".").pop()}` : "";
-  return TEXT_EXTENSIONS.has(extension.toLowerCase()) || file === "SKILL.md" || file === "AGENTS.md";
+  return TEXT_EXTENSIONS.has(extension.toLowerCase()) || (0, import_node_path2.basename)(file) === ".cursorrules";
 }
 function score(findings) {
   if (findings.length === 0)
@@ -10243,6 +10243,150 @@ function initialize(targetPath = ".") {
   return created;
 }
 
+// dist/discovery.js
+var import_node_fs6 = __toESM(require("node:fs"), 1);
+var import_node_path6 = require("node:path");
+
+// dist/version.js
+var TOOL_VERSION = "0.4.1";
+
+// dist/discovery.js
+var IGNORED_DIRECTORIES = [".git", ".skillci-workspaces", "coverage", "dist", "node_modules"];
+var MAX_DEPTH = 64;
+var CONVENTIONS = [
+  { pattern: "**/AGENTS.md", hosts: ["codex", "claude", "cursor", "copilot"] },
+  { pattern: "**/AGENTS.override.md", hosts: ["codex"] },
+  { pattern: "**/CLAUDE.md", hosts: ["claude"] },
+  { pattern: "CLAUDE.md", hosts: ["cursor", "copilot"] },
+  { pattern: "**/CLAUDE.local.md", hosts: ["claude"] },
+  { pattern: "GEMINI.md", hosts: ["copilot"] },
+  { pattern: "**/.claude/rules/**/*.md", hosts: ["claude"] },
+  { pattern: "**/.claude/commands/**/*.md", hosts: ["claude"] },
+  { pattern: "**/.cursor/rules/**/*.mdc", hosts: ["cursor"] },
+  { pattern: "**/.cursorrules", hosts: ["cursor"] },
+  { pattern: "**/.github/copilot-instructions.md", hosts: ["copilot"] },
+  { pattern: "**/.github/instructions/**/*.instructions.md", hosts: ["copilot"] },
+  { pattern: "**/.agents/skills/**/SKILL.md", hosts: ["codex", "cursor", "copilot"] },
+  { pattern: "**/.claude/skills/**/SKILL.md", hosts: ["claude", "cursor", "copilot"] },
+  { pattern: "**/.cursor/skills/**/SKILL.md", hosts: ["cursor"] },
+  { pattern: "**/.codex/skills/**/SKILL.md", hosts: ["cursor"] },
+  { pattern: "**/.github/skills/**/SKILL.md", hosts: ["copilot"] }
+];
+function discover(rootPath = ".") {
+  const root = (0, import_node_path6.resolve)(rootPath);
+  const result = {
+    schemaVersion: 1,
+    toolVersion: TOOL_VERSION,
+    root: ".",
+    complete: true,
+    ignoredDirectories: [...IGNORED_DIRECTORIES],
+    symlinks: "skip",
+    items: [],
+    diagnostics: []
+  };
+  const report = (path2, code, severity, message) => {
+    result.diagnostics.push({ path: path2, code, severity, message });
+    if (severity === "error")
+      result.complete = false;
+  };
+  try {
+    const stat = import_node_fs6.default.lstatSync(root);
+    if (!stat.isDirectory() || stat.isSymbolicLink()) {
+      report(".", "invalid-root", "error", "Discovery requires a directory that is not a symbolic link.");
+      return result;
+    }
+  } catch {
+    report(".", "invalid-root", "error", "Discovery root does not exist or cannot be accessed.");
+    return result;
+  }
+  function visit(directory, depth) {
+    const directoryPath = posix((0, import_node_path6.relative)(root, directory)) || ".";
+    if (depth > MAX_DEPTH) {
+      report(directoryPath, "depth-limit", "error", "Directory depth exceeds the discovery limit of 64.");
+      return;
+    }
+    let names;
+    try {
+      names = import_node_fs6.default.readdirSync(directory).sort(compare);
+    } catch {
+      report(directoryPath, "unreadable", "error", "Cannot read directory; inventory is incomplete.");
+      return;
+    }
+    for (const name of names) {
+      const absolutePath = (0, import_node_path6.join)(directory, name);
+      const path2 = posix((0, import_node_path6.relative)(root, absolutePath));
+      try {
+        const stat = import_node_fs6.default.lstatSync(absolutePath);
+        if (stat.isSymbolicLink()) {
+          report(path2, "symlink-skipped", "info", "Symbolic link was skipped without reading its target.");
+        } else if (stat.isDirectory()) {
+          if (!IGNORED_DIRECTORIES.includes(name))
+            visit(absolutePath, depth + 1);
+        } else if (stat.isFile()) {
+          const item = identify(path2);
+          if (item) {
+            const descriptor = import_node_fs6.default.openSync(absolutePath, import_node_fs6.default.constants.O_RDONLY | import_node_fs6.default.constants.O_NOFOLLOW);
+            import_node_fs6.default.closeSync(descriptor);
+            result.items.push(item);
+          }
+        }
+      } catch {
+        report(path2, "unreadable", "error", "Cannot inspect entry; inventory is incomplete.");
+      }
+    }
+  }
+  visit(root, 0);
+  result.items.sort((a, b) => compare(a.path, b.path));
+  result.diagnostics.sort((a, b) => compare(a.path, b.path) || compare(a.code, b.code));
+  return result;
+}
+function identify(path2) {
+  const conventions = CONVENTIONS.filter(({ pattern }) => minimatch(path2, pattern, { dot: true }));
+  const skill = (0, import_node_path6.basename)(path2) === "SKILL.md";
+  if (!skill && conventions.length === 0)
+    return void 0;
+  return {
+    path: path2,
+    kind: skill ? "skill" : "instruction",
+    hosts: [...new Set(conventions.flatMap(({ hosts }) => hosts))].sort(compare),
+    evidence: conventions.length ? conventions.map(({ pattern }) => pattern).sort(compare) : ["portable SKILL.md filename"],
+    policyCoverage: "unknown"
+  };
+}
+function renderDiscovery(result) {
+  const lines = [
+    "# SkillCI discovery",
+    "",
+    `- Status: ${result.complete ? "complete within declared scope" : "incomplete"}`,
+    `- Files found: ${result.items.length}`,
+    `- Ignored directories: ${result.ignoredDirectories.join(", ")}`,
+    "- Symbolic links: skipped; policy coverage: unknown",
+    ""
+  ];
+  if (!result.items.length)
+    lines.push("No supported Skill or instruction files found. This is not a safety assessment.");
+  else {
+    lines.push("| Path | Kind | Host conventions | Evidence |", "| --- | --- | --- | --- |");
+    for (const item of result.items)
+      lines.push(`| ${cell(item.path)} | ${item.kind} | ${item.hosts.join(", ") || "unassigned"} | ${cell(item.evidence.join(", "))} |`);
+    lines.push("", "Paths are relative to the directory passed to discover; use that directory as cwd when auditing.");
+  }
+  if (result.diagnostics.length)
+    lines.push("", "## Diagnostics", "", ...result.diagnostics.map((d) => `- ${d.severity}: ${cell(d.path)} (${d.code}): ${d.message}`));
+  lines.push("", "This is a file inventory. Host loading, frontmatter validity, and policy enforcement are not inferred.");
+  return `${lines.join("\n")}
+`;
+}
+function posix(path2) {
+  return path2.split(import_node_path6.sep).join("/");
+}
+function compare(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+function cell(value) {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replace(/[\\|`*_{}\[\]()!#]/g, (character) => `&#${character.charCodeAt(0)};`).replace(/[\r\n]/g, " ");
+}
+
 // dist/report.js
 function renderMarkdown(result) {
   const heading = `# SkillCI audit report
@@ -10322,6 +10466,7 @@ var HELP = `SkillCI \u2014 CI checks for AI agent skills
 
 Usage:
   skillci init [directory]
+  skillci discover [path] [--format markdown|json]
   skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
@@ -10332,6 +10477,7 @@ Usage:
 
 Examples:
   skillci init
+  skillci discover . --format json
   skillci audit .github/skills/release
   skillci audit .github/skills/release --policy skillci/policy.yml
   skillci audit . --format github
@@ -10346,6 +10492,28 @@ async function main(argv) {
   const [command, ...args] = argv;
   if (!command || command === "--help" || command === "-h") {
     console.log(HELP);
+    return;
+  }
+  if (command === "discover") {
+    let path2;
+    let format2 = "markdown";
+    for (let index = 0; index < args.length; index += 1) {
+      if (args[index] === "--format") {
+        const value = args[++index];
+        if (value !== "markdown" && value !== "json")
+          throw new Error("discover --format requires markdown or json.");
+        format2 = value;
+      } else if (args[index].startsWith("-"))
+        throw new Error(`Unknown discover option: ${args[index]}`);
+      else if (path2 !== void 0)
+        throw new Error("discover accepts a single directory.");
+      else
+        path2 = args[index];
+    }
+    const result2 = discover(path2);
+    console.log(format2 === "json" ? JSON.stringify(result2, null, 2) : renderDiscovery(result2));
+    if (!result2.complete)
+      process.exitCode = 2;
     return;
   }
   if (command === "init") {
@@ -10436,7 +10604,7 @@ ${created.map((file) => `  - ${file}`).join("\n")}`);
 ` : format === "github" ? renderGitHubAnnotations(result) : renderMarkdown(result);
   const outputPath = option(args, "--output");
   if (outputPath) {
-    (0, import_node_fs6.writeFileSync)(outputPath, output, "utf8");
+    (0, import_node_fs7.writeFileSync)(outputPath, output, "utf8");
     console.log(`Wrote report to ${outputPath}`);
   } else {
     console.log(output);

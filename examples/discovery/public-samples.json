@@ -1,0 +1,9 @@
+{
+  "verifiedAt": "2026-11-04",
+  "scope": "filename inventory only; no Skills executed",
+  "samples": [
+    { "repository": "https://github.com/openai/skills", "commit": "49f948faa9258a0c61caceaf225e179651397431", "directory": "openai-skills", "skills": 44, "instructions": 0, "licenseNote": "Per-skill licenses; consult each LICENSE file." },
+    { "repository": "https://github.com/anthropics/skills", "commit": "ca45fc496a3436251f191354091d557da31c15b5", "directory": "anthropic-skills", "skills": 20, "instructions": 0, "licenseNote": "Per-skill licenses; consult each LICENSE file." },
+    { "repository": "https://github.com/github/awesome-copilot", "commit": "7e408815ddcb64889a3683799a85399331cfd4ef", "directory": "awesome-copilot", "skills": 475, "instructions": 10, "licenseNote": "Consult repository LICENSE and any component-specific licenses." }
+  ]
+}

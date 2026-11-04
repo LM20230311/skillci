@@ -1,5 +1,5 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
-import { relative, resolve } from "node:path";
+import { basename, relative, resolve } from "node:path";
 import { extractNetworkHosts, extractWorkingDirectories, hostIsAllowed, loadPolicy, matchesCommandPattern, matchesDeniedPath, matchesPathPattern, type Policy } from "./policy.js";
 import type { AuditResult, Finding, Severity, SuppressedFinding } from "./types.js";
 
@@ -57,7 +57,7 @@ const RULES: Rule[] = [
 ];
 
 const SKIPPED_DIRECTORIES = new Set([".git", "node_modules", "dist", "coverage"]);
-const TEXT_EXTENSIONS = new Set([".md", ".txt", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts", ".json", ".yml", ".yaml"]);
+const TEXT_EXTENSIONS = new Set([".md", ".mdc", ".txt", ".sh", ".bash", ".zsh", ".js", ".mjs", ".cjs", ".ts", ".json", ".yml", ".yaml"]);
 const SEVERITY_WEIGHT: Record<Severity, number> = { critical: 4, high: 3, medium: 2, low: 1 };
 const KNOWN_RULE_IDS = new Set([...RULES.map((rule) => rule.ruleId), "SKILLCI101", "SKILLCI102", "SKILLCI103", "SKILLCI104", "SKILLCI105"]);
 
@@ -283,7 +283,7 @@ function collectFiles(target: string): string[] {
 
 function isTextFile(file: string): boolean {
   const extension = file.includes(".") ? `.${file.split(".").pop()}` : "";
-  return TEXT_EXTENSIONS.has(extension.toLowerCase()) || file === "SKILL.md" || file === "AGENTS.md";
+  return TEXT_EXTENSIONS.has(extension.toLowerCase()) || basename(file) === ".cursorrules";
 }
 
 function score(findings: Finding[]): AuditResult["score"] {

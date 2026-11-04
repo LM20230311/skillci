@@ -68,7 +68,7 @@ Every stable SkillCI release is a **dual release**. Do not publish only one chan
 
 Required order for a normal release:
 
-1. Bump `package.json` and `package-lock.json` to the next semantic version.
+1. Bump `package.json`, `package-lock.json`, and `src/version.ts` to the next semantic version; update versioned discovery examples when relevant.
 2. Synchronize English and Chinese README commands, exact Action tag, npm/npx examples, and badges; finalize `CHANGELOG.md` and `docs/PROJECT_PLAN.md`.
 3. Run `npm test`, a representative CLI command, `npm pack --dry-run`, and `git diff --check`; build and commit `dist/` when required above.
 4. Commit, push, and wait for CI on `main`.

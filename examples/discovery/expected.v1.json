@@ -1,0 +1,39 @@
+{
+  "schemaVersion": 1,
+  "toolVersion": "0.4.1",
+  "root": ".",
+  "complete": true,
+  "ignoredDirectories": [".git", ".skillci-workspaces", "coverage", "dist", "node_modules"],
+  "symlinks": "skip",
+  "items": [
+    {
+      "path": ".agents/skills/docs/SKILL.md",
+      "kind": "skill",
+      "hosts": ["codex", "copilot", "cursor"],
+      "evidence": ["**/.agents/skills/**/SKILL.md"],
+      "policyCoverage": "unknown"
+    },
+    {
+      "path": ".claude/skills/review/SKILL.md",
+      "kind": "skill",
+      "hosts": ["claude", "copilot", "cursor"],
+      "evidence": ["**/.claude/skills/**/SKILL.md"],
+      "policyCoverage": "unknown"
+    },
+    {
+      "path": ".cursor/rules/docs.mdc",
+      "kind": "instruction",
+      "hosts": ["cursor"],
+      "evidence": ["**/.cursor/rules/**/*.mdc"],
+      "policyCoverage": "unknown"
+    },
+    {
+      "path": ".github/instructions/docs.instructions.md",
+      "kind": "instruction",
+      "hosts": ["copilot"],
+      "evidence": ["**/.github/instructions/**/*.instructions.md"],
+      "policyCoverage": "unknown"
+    }
+  ],
+  "diagnostics": []
+}

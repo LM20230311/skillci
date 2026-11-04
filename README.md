@@ -1,8 +1,8 @@
 # SkillCI
 
 <p align="center">
-  <strong>Give your AI agent skills a CI gate.</strong><br />
-  Catch risky instructions before they become risky actions.
+  <strong>Policy and regression CI for Agent Skills.</strong><br />
+  Review permission changes and check behavior in a constrained workspace.
 </p>
 
 <p align="center">
@@ -18,11 +18,11 @@
 
 > **Your AI agent has CI. Do your skills?**
 
-Agent Skills can read files, run commands, call APIs, and change repositories. SkillCI is an open-source CLI and GitHub Action that finds risky instructions, enforces version-controlled policies, and keeps regression checks close to the Skill itself.
+Agent Skills can read files, run commands, call APIs, and change repositories. SkillCI helps Skill repository authors and maintainers review risky instructions, check version-controlled policies, and keep regression checks close to the Skill itself. It provides an open-source CLI and GitHub Action.
 
 It is designed for Skills used with Codex, Claude Code, Cursor, GitHub Copilot, Gemini CLI, and other instruction-driven agents.
 
-**Planning and iteration:** see [the project plan](docs/PROJECT_PLAN.md).
+**Planning and iteration:** see [the project plan](docs/PROJECT_PLAN.md). Discovery work follows [the narrowed relaunch plan (Chinese)](docs/RELAUNCH_PLAN_REVISED.zh-CN.md).
 
 ## Who is SkillCI for?
 
@@ -104,6 +104,31 @@ npx skillci@0.4.1 audit .github/skills
 ```
 
 Use `LM20230311/skillci@v0.4.1` when adding the GitHub Action to a workflow.
+
+## Discover what to audit (unreleased, source checkout)
+
+The next release adds a read-only inventory of Skills and project instructions. Build this checkout to try it; npm and the `v0.4.1` Action do not yet include `discover`.
+
+```bash
+npm ci
+npm run build
+node dist/index.js discover examples/discovery/project
+node dist/index.js discover examples/discovery/project --format json
+node examples/discovery/audit-discovered.mjs examples/discovery/project
+```
+
+The last command statically audits every discovered entry point. For your own repository, replace `examples/discovery/project` with its directory. A single discovered path can also be passed to `audit`; paths in the inventory are relative to the scanned directory:
+
+| Host | Minimal audit example from this checkout |
+| --- | --- |
+| Codex | `node dist/index.js audit examples/discovery/project/.agents/skills/docs/SKILL.md` |
+| Claude Code | `node dist/index.js audit examples/discovery/project/.claude/skills/review/SKILL.md` |
+| Cursor | `node dist/index.js audit examples/discovery/project/.cursor/rules/docs.mdc` |
+| Copilot | `node dist/index.js audit examples/discovery/project/.github/instructions/docs.instructions.md` |
+
+Shared directories have multiple host labels in one record. Other `SKILL.md` files are portable candidates with no inferred host. Instructions are listed separately from Skills. This inventories conventions, including nested samples; it does not establish active host loading, valid frontmatter, or policy coverage (`unknown`).
+
+The scan skips `.git`, `.skillci-workspaces`, `coverage`, `dist`, and `node_modules`, does not use `.gitignore`, and never follows symbolic links or searches global home directories automatically. Read errors produce an incomplete result and exit 2; empty results explicitly mean no supported files were found. See the [discovery contract and official source links](docs/DISCOVERY.md) for the supported matrix, JSON v1 fields, diagnostics, and limits.
 
 ## Get started in three minutes
 
@@ -341,6 +366,9 @@ This is a deliberately narrow execution boundary, not a claim of a complete sand
 # Generate a policy, sample Skill, and regression case.
 skillci init [directory]
 
+# Inventory project Skills and instructions (unreleased; build this source checkout).
+skillci discover [path] [--format markdown|json]
+
 # Audit a file or directory.
 skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
 
@@ -393,7 +421,7 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 
 ### Next
 
-- [ ] Adapters for Codex, Claude Code, Cursor, and GitHub Copilot conventions
+- [ ] Release the implemented Codex, Claude Code, Cursor, and Copilot discovery adapters after acceptance checks
 - [ ] A public corpus of unsafe and broken Skills
 - [ ] SARIF upload and richer PR summaries
 

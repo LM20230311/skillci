@@ -1,8 +1,8 @@
 # SkillCI
 
 <p align="center">
-  <strong>为你的 AI Agent Skills 加上一道 CI 防线。</strong><br />
-  在有风险的指令变成有风险的操作之前发现它们。
+  <strong>Agent Skills 的权限与行为回归 CI。</strong><br />
+  审查权限变化，检查受限工作区中的行为。
 </p>
 
 <p align="center">
@@ -18,11 +18,11 @@
 
 > **你的 AI Agent 有 CI；你的 Skills 有吗？**
 
-Agent Skill 可以读取文件、执行命令、调用 API 和修改仓库。SkillCI 是一个开源 CLI 与 GitHub Action：它识别高风险指令、执行版本控制的策略，并让安全回归检查与 Skill 本身放在一起。
+Agent Skill 可以读取文件、执行命令、调用 API 和修改仓库。SkillCI 帮助 Skill 仓库作者和维护者审查高风险指令、检查版本控制的策略，并让回归检查与 Skill 本身放在一起。它提供开源 CLI 与 GitHub Action。
 
 它适用于 Codex、Claude Code、Cursor、GitHub Copilot、Gemini CLI，以及其他由指令驱动的 Agent Skills。
 
-**项目计划与迭代记录：** 请查看 [PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。
+**项目计划与迭代记录：** 请查看 [PROJECT_PLAN.md](docs/PROJECT_PLAN.md)。自动发现工作遵循 [收敛后的再启动执行方案](docs/RELAUNCH_PLAN_REVISED.zh-CN.md)。
 
 ## 谁适合使用 SkillCI？
 
@@ -104,6 +104,31 @@ npx skillci@0.4.1 audit .github/skills
 ```
 
 在 GitHub Actions 工作流中继续使用 `LM20230311/skillci@v0.4.1`。
+
+## 自动发现该审计什么（尚未发布，需源码构建）
+
+下一版本新增只读的 Skill 与项目指令清单。可构建此源码仓库体验；npm 和 `v0.4.1` Action 尚不包含 `discover`。
+
+```bash
+npm ci
+npm run build
+node dist/index.js discover examples/discovery/project
+node dist/index.js discover examples/discovery/project --format json
+node examples/discovery/audit-discovered.mjs examples/discovery/project
+```
+
+最后一条命令逐个静态审计发现的入口文件。检查自己的仓库时，将 `examples/discovery/project` 替换成目标目录。也可以把单个发现路径传给 `audit`；清单路径相对于扫描目录：
+
+| 宿主 | 在此源码仓库运行的最小审计示例 |
+| --- | --- |
+| Codex | `node dist/index.js audit examples/discovery/project/.agents/skills/docs/SKILL.md` |
+| Claude Code | `node dist/index.js audit examples/discovery/project/.claude/skills/review/SKILL.md` |
+| Cursor | `node dist/index.js audit examples/discovery/project/.cursor/rules/docs.mdc` |
+| Copilot | `node dist/index.js audit examples/discovery/project/.github/instructions/docs.instructions.md` |
+
+共享目录会在同一条记录中标记多个宿主。其他 `SKILL.md` 是未推断宿主的可移植候选。指令文件与 Skill 分别标注。它盘点符合约定的文件，也会包含嵌套示例；不会确认实际加载、frontmatter 有效性或策略覆盖（`unknown`）。
+
+扫描跳过 `.git`、`.skillci-workspaces`、`coverage`、`dist` 和 `node_modules`，不读取 `.gitignore`，不跟随符号链接，也不自动搜索用户全局目录。读取错误会返回不完整结果并退出 2；空结果明确表示未发现受支持文件。[自动发现契约与官方来源](docs/DISCOVERY.zh-CN.md) 记录了支持矩阵、JSON v1 字段、诊断与边界。
 
 ## 三分钟上手
 
@@ -341,6 +366,9 @@ skillci behavior run examples/behavior/docs-update.behavior.yml
 # 生成策略、安全示例 Skill 和回归案例。
 skillci init [directory]
 
+# 盘点项目 Skill 与指令（尚未发布，需源码构建）。
+skillci discover [path] [--format markdown|json]
+
 # 审计文件或目录。
 skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
 
@@ -393,7 +421,7 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 
 ### 下一步
 
-- [ ] 适配 Codex、Claude Code、Cursor 与 GitHub Copilot 的约定
+- [ ] 验收后发布已实现的 Codex、Claude Code、Cursor 与 Copilot 自动发现适配器
 - [ ] 建立公开的危险与失效 Skill 样本库
 - [ ] SARIF 上传与更丰富的 PR 摘要
 

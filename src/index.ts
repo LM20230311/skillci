@@ -4,6 +4,7 @@ import { audit } from "./audit.js";
 import { renderBehaviorRun, renderBehaviorValidation, runBehaviorCase, validateBehaviorCase } from "./behavior.js";
 import { renderTestRun, runCases } from "./cases.js";
 import { initialize } from "./init.js";
+import { discover, renderDiscovery } from "./discovery.js";
 import { diffPolicies, renderPolicyDiff, renderPolicyDiffGitHub, renderPolicyValidation, validatePolicy } from "./policy.js";
 import { renderGitHubAnnotations, renderMarkdown } from "./report.js";
 import type { ReportFormat } from "./types.js";
@@ -12,6 +13,7 @@ const HELP = `SkillCI — CI checks for AI agent skills
 
 Usage:
   skillci init [directory]
+  skillci discover [path] [--format markdown|json]
   skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
@@ -22,6 +24,7 @@ Usage:
 
 Examples:
   skillci init
+  skillci discover . --format json
   skillci audit .github/skills/release
   skillci audit .github/skills/release --policy skillci/policy.yml
   skillci audit . --format github
@@ -37,6 +40,24 @@ async function main(argv: string[]): Promise<void> {
   const [command, ...args] = argv;
   if (!command || command === "--help" || command === "-h") {
     console.log(HELP);
+    return;
+  }
+
+  if (command === "discover") {
+    let path: string | undefined;
+    let format = "markdown";
+    for (let index = 0; index < args.length; index += 1) {
+      if (args[index] === "--format") {
+        const value = args[++index];
+        if (value !== "markdown" && value !== "json") throw new Error("discover --format requires markdown or json.");
+        format = value;
+      } else if (args[index].startsWith("-")) throw new Error(`Unknown discover option: ${args[index]}`);
+      else if (path !== undefined) throw new Error("discover accepts a single directory.");
+      else path = args[index];
+    }
+    const result = discover(path);
+    console.log(format === "json" ? JSON.stringify(result, null, 2) : renderDiscovery(result));
+    if (!result.complete) process.exitCode = 2;
     return;
   }
 

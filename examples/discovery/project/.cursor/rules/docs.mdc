@@ -1,0 +1,7 @@
+---
+description: Documentation style
+globs: docs/**/*.md
+alwaysApply: false
+---
+
+Keep documentation examples small and check local links.

@@ -2,6 +2,22 @@
 
 All notable changes to SkillCI are recorded in this file.
 
+## [Unreleased]
+
+### Added
+
+- Read-only `skillci discover [path] --format markdown|json` with relative paths, stable schema v1 output, host-convention evidence, and structured diagnostics.
+- Discovery fixtures and source-checkout audit examples for Codex, Claude Code, Cursor, and GitHub Copilot.
+- Fixed-commit discovery inventory checks for three public Skill repositories.
+
+### Fixed
+
+- Audit Cursor `.mdc` and legacy `.cursorrules` files so discovered instructions can be checked with existing audit rules.
+
+### Documentation
+
+- Added a narrowed relaunch plan with discovery, SARIF, and adoption milestones, explicit behavior-observation limits, and verifiable adoption metrics.
+
 ## [0.4.1] - 2026-07-11
 
 ### Added

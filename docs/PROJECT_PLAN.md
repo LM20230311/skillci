@@ -4,7 +4,9 @@
 
 **当前阶段：** Phase 4 — Agent 宿主适配
 **当前版本：** `v0.4.1`
-**最后更新：** 2026-07-11
+**最后更新：** 2026-11-04
+
+**当前迭代：** 按 [收敛后的再启动执行方案](RELAUNCH_PLAN_REVISED.zh-CN.md) 推进 `v0.5.0`。已在本地实现只读发现、JSON v1、四个宿主的目录适配和审计接入示例；正式版本仍是 `v0.4.1`。下一步完成独立新用户体验验收、确认后推送并验证远程 CI，再安排发布。SARIF 排至后续里程碑。
 
 ## 产品北极星
 
@@ -25,7 +27,7 @@
 | Phase 1 | 发布可安装、可演示的 MVP | 公开仓库、CI、首个 Release、完整 README | ✅ 完成 |
 | Phase 2 | 让策略可靠地表达边界 | 路径/命令/网络规则更准确，减少误报 | ✅ 完成 |
 | Phase 3 | 验证 Skill 的实际行为 | 隔离 fixture、行为断言、可复现执行记录 | ✅ 完成 |
-| Phase 4 | 接入主流 Agent 生态 | Codex、Claude Code、Cursor、Copilot 适配器 | ⏳ 待开始 |
+| Phase 4 | 接入主流 Agent 生态 | Codex、Claude Code、Cursor、Copilot 适配器 | 🟡 本地实现，待发布验收 |
 | Phase 5 | 建立社区与可信基准 | 规则包、样本库、贡献流程、使用案例 | ⏳ 待开始 |
 
 ---
@@ -180,13 +182,24 @@
 
 **目标：** 让用户不用改变现有开发习惯即可接入 SkillCI。
 
+**2026-11-04 规划修订：** 已完成再启动方案的范围收敛，并在本地实现 `v0.5.0` 的发现及审计接入；策略覆盖统一显示 `unknown`。`v0.6.0` 规划 SARIF 与 GitHub 接入；`v0.7.0` 规划固定版本样本和采用验证。DSH adapter、badge 与团队功能按修订方案的进入条件推进。
+
 ### 要做什么
 
-- [ ] Codex：识别常用 Skills 与项目指令目录。
-- [ ] Claude Code：识别 Skills、命令和项目说明目录。
-- [ ] Cursor / GitHub Copilot：识别其 instruction / skill 约定。
-- [ ] 提供 `skillci discover`，展示发现的 Skill 与策略覆盖情况。
-- [ ] 为每个宿主提供最小可运行示例。
+- [x] Codex：识别常用 Skills 与项目指令目录（本地实现）。
+- [x] Claude Code：识别 Skills、命令和项目说明目录（本地实现）。
+- [x] Cursor / GitHub Copilot：识别其 instruction / skill 约定（本地实现）。
+- [x] 提供 `skillci discover`：只读清单、相对路径、识别依据、JSON v1 与结构化诊断；策略覆盖显示 `unknown`。
+- [x] 为每个宿主提供最小可运行示例，并用已有 audit 扫描发现的入口文件。
+- [x] 在三个固定 commit 的公开仓库核对发现清单：[验证记录](DISCOVERY_VALIDATION.md)。这不是安全基准或外部采用。
+- [ ] 独立新用户按 README 在 5 分钟内完成发现与审计，记录卡点。
+- [ ] 确认推送后完成远程 CI，并按双渠道流程发布 `v0.5.0`。
+
+### 本次实现与验证范围
+
+宿主约定于 2026-11-04 核验官方来源，详见 [发现契约](DISCOVERY.zh-CN.md)。测试覆盖共享文件去重、嵌套目录、空结果、忽略目录、符号链接、权限错误、深度限制、CLI 参数和 JSON 样例。发现器不执行文件，不自动读取全局目录。同步补充 `.mdc`、`.cursorrules` 的现有静态审计支持。
+
+本地验证：36 项测试通过，Action bundle 发现命令、发现后审计示例、三个固定 commit 的公开仓库清单验证和 `npm pack --dry-run` 通过；双语 Markdown、相对链接及 `git diff --check` 检查通过。尚未发布新版本。
 
 ### 做到什么程度才算完成
 
