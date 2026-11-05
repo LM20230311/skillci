@@ -100,14 +100,21 @@ npx skillci audit .github/skills
 For a one-off check, no installation is needed:
 
 ```bash
-npx skillci@0.4.1 audit .github/skills
+npx skillci@0.5.0 audit .github/skills
 ```
 
-Use `LM20230311/skillci@v0.4.1` when adding the GitHub Action to a workflow.
+Use `LM20230311/skillci@v0.5.0` when adding the GitHub Action to a workflow.
 
-## Discover what to audit (unreleased, source checkout)
+## Discover what to audit
 
-The next release adds a read-only inventory of Skills and project instructions. Build this checkout to try it; npm and the `v0.4.1` Action do not yet include `discover`.
+Inventory Skills and project instructions without executing them:
+
+```bash
+npx skillci@0.5.0 discover .
+npx skillci@0.5.0 discover . --format json
+```
+
+To try the four-host fixture and the discovery-to-audit example, use a source checkout:
 
 ```bash
 npm ci
@@ -223,7 +230,7 @@ The GitHub Action can annotate those expansions when the workflow checks out the
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.4.1
+- uses: LM20230311/skillci@v0.5.0
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -266,7 +273,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.4.1
+      - uses: LM20230311/skillci@v0.5.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
@@ -366,7 +373,7 @@ This is a deliberately narrow execution boundary, not a claim of a complete sand
 # Generate a policy, sample Skill, and regression case.
 skillci init [directory]
 
-# Inventory project Skills and instructions (unreleased; build this source checkout).
+# Inventory project Skills and instructions without executing them.
 skillci discover [path] [--format markdown|json]
 
 # Audit a file or directory.
@@ -418,12 +425,13 @@ SkillCI aims to be the lightweight, open foundation for those controls.
 - [x] Docker behavior runner with a copied fixture workspace, network denial, strict Node command/read/write/network assertions, and CI coverage
 - [x] YAML regression cases for maximum risk and forbidden rules
 - [x] Composite GitHub Action
+- [x] Read-only discovery for Codex, Claude Code, Cursor, and Copilot conventions, with JSON v1 and audit examples
 
 ### Next
 
-- [ ] Release the implemented Codex, Claude Code, Cursor, and Copilot discovery adapters after acceptance checks
+- [ ] SARIF output and GitHub Code Scanning integration
 - [ ] A public corpus of unsafe and broken Skills
-- [ ] SARIF upload and richer PR summaries
+- [ ] Richer PR summaries
 
 ## Contributing
 

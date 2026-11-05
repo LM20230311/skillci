@@ -4,7 +4,7 @@
 
 `discover` inventories project files that match named conventions. It checks candidate readability without including file content. It does not parse Skill frontmatter, resolve instruction imports, inspect host settings, or determine what a running agent loads. The paths include nested projects and sample files.
 
-This command is unreleased. Build this checkout with `npm ci && npm run build`, then run:
+Available in v0.5.0: run `npx skillci@0.5.0 discover . --format json` in your project. To run the source fixtures, build this checkout with `npm ci && npm run build`, then run:
 
 ```bash
 node dist/index.js discover examples/discovery/project

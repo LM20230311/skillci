@@ -1,6 +1,6 @@
 {
   "name": "skillci",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "Security audit and CI reporting for AI agent skills.",
   "license": "MIT",
   "repository": {
@@ -27,7 +27,7 @@
     "check": "npm run build"
   },
   "dependencies": {
-    "minimatch": "^10.2.5",
+    "minimatch": "^11.0.4",
     "yaml": "^2.9.0"
   },
   "devDependencies": {

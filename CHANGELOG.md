@@ -4,6 +4,8 @@ All notable changes to SkillCI are recorded in this file.
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-11-05
+
 ### Added
 
 - Read-only `skillci discover [path] --format markdown|json` with relative paths, stable schema v1 output, host-convention evidence, and structured diagnostics.
@@ -13,6 +15,10 @@ All notable changes to SkillCI are recorded in this file.
 ### Fixed
 
 - Audit Cursor `.mdc` and legacy `.cursorrules` files so discovered instructions can be checked with existing audit rules.
+
+### Security
+
+- Upgrade minimatch to 11.0.4 and its brace-expansion dependency to a patched version, addressing reported glob/brace expansion denial-of-service vulnerabilities.
 
 ### Documentation
 

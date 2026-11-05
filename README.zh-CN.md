@@ -100,14 +100,21 @@ npx skillci audit .github/skills
 如果只是临时检查，无需安装：
 
 ```bash
-npx skillci@0.4.1 audit .github/skills
+npx skillci@0.5.0 audit .github/skills
 ```
 
-在 GitHub Actions 工作流中继续使用 `LM20230311/skillci@v0.4.1`。
+在 GitHub Actions 工作流中使用 `LM20230311/skillci@v0.5.0`。
 
-## 自动发现该审计什么（尚未发布，需源码构建）
+## 自动发现该审计什么
 
-下一版本新增只读的 Skill 与项目指令清单。可构建此源码仓库体验；npm 和 `v0.4.1` Action 尚不包含 `discover`。
+盘点 Skill 与项目指令文件，不执行它们：
+
+```bash
+npx skillci@0.5.0 discover .
+npx skillci@0.5.0 discover . --format json
+```
+
+要体验四宿主 fixture 和发现后审计示例，请使用源码仓库：
 
 ```bash
 npm ci
@@ -223,7 +230,7 @@ SkillCI 会将新增限制与**权限扩大**分开显示。新增 `allow.networ
     ref: main
     path: policy-main
 
-- uses: LM20230311/skillci@v0.4.1
+- uses: LM20230311/skillci@v0.5.0
   with:
     path: .github/skills
     policy: skillci/policy.yml
@@ -266,7 +273,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: LM20230311/skillci@v0.4.1
+      - uses: LM20230311/skillci@v0.5.0
         with:
           path: .github/skills
           policy: skillci/policy.yml
@@ -366,7 +373,7 @@ skillci behavior run examples/behavior/docs-update.behavior.yml
 # 生成策略、安全示例 Skill 和回归案例。
 skillci init [directory]
 
-# 盘点项目 Skill 与指令（尚未发布，需源码构建）。
+# 盘点项目 Skill 与指令，不执行它们。
 skillci discover [path] [--format markdown|json]
 
 # 审计文件或目录。
@@ -418,12 +425,13 @@ SkillCI 希望成为这套控制机制轻量、开放的基础。
 - [x] Docker 行为 runner：复制 fixture 工作区、拒绝网络、严格的 Node 命令/读/写/网络断言与 CI 覆盖
 - [x] 用于最大风险等级和禁止规则的 YAML 静态回归案例
 - [x] Composite GitHub Action
+- [x] Codex、Claude Code、Cursor、Copilot 约定的只读发现、JSON v1 与审计示例
 
 ### 下一步
 
-- [ ] 验收后发布已实现的 Codex、Claude Code、Cursor 与 Copilot 自动发现适配器
+- [ ] SARIF 输出与 GitHub Code Scanning 集成
 - [ ] 建立公开的危险与失效 Skill 样本库
-- [ ] SARIF 上传与更丰富的 PR 摘要
+- [ ] 更丰富的 PR 摘要
 
 ## 贡献
 

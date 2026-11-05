@@ -1,6 +1,6 @@
 # Discovery validation — 2026-11-04
 
-This is an engineering check of the unreleased discovery implementation, not a public security benchmark or an external adoption claim. No sample Skill, install script, or repository test was executed. Only a filename inventory and Git metadata were inspected.
+This is an engineering check of the discovery implementation prepared for v0.5.0, not a public security benchmark or an external adoption claim. No sample Skill, install script, or repository test was executed. Only a filename inventory and Git metadata were inspected.
 
 | Repository | Fixed commit | Skill files | Instruction files | Diagnostics |
 | --- | --- | --- | --- | --- |
@@ -24,4 +24,4 @@ node examples/discovery/verify-public-samples.mjs /path/to/local-clones
 
 The script performs read-only Git metadata and discovery operations, checks exact commits and clean worktrees, compares every Skill path, and verifies the recorded instruction count. It does not fetch repositories or execute their code. Review instruction-path lists separately if changing the samples or conventions.
 
-Release acceptance remains open: a person who did not implement discovery must try the documented first-use flow and record whether it takes less than five minutes, with any friction. Remote CI and publication are also pending; no new release is implied by these local checks.
+The discovery implementation passed [remote CI](https://github.com/LM20230311/skillci/actions/runs/41956203345) on 2026-11-05. The owner requested publication before independent first-use acceptance: the five-minute trial by a person who did not implement discovery remains a post-release follow-up. This local sample validation does not establish independent-user acceptance or external adoption.

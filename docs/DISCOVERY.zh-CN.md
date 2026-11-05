@@ -4,7 +4,7 @@
 
 `discover` 盘点符合命名与目录约定的项目文件，检查候选文件是否可读，不把文件内容放入结果。它不解析 Skill frontmatter、不解析指令导入、不读取宿主设置，也不判断正在运行的 Agent 实际加载了什么。结果包含嵌套项目和示例文件。
 
-该命令尚未发布。先在此源码仓库执行 `npm ci && npm run build`，然后运行：
+该命令从 v0.5.0 提供：在项目中运行 `npx skillci@0.5.0 discover . --format json`。要运行源码 fixture，先在此源码仓库执行 `npm ci && npm run build`，然后运行：
 
 ```bash
 node dist/index.js discover examples/discovery/project
