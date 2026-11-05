@@ -1,0 +1,33 @@
+name: SARIF corrected lifecycle validation
+
+on:
+  push:
+    branches: [validation/sarif-lifecycle-v2-20261105]
+
+jobs:
+  lifecycle:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - name: Scan controlled fixture as text only
+        run: node dist/action/index.cjs audit validation/sarif-lifecycle/SKILL.md --format sarif --source-root . --output lifecycle.sarif --no-fail
+      - name: Compare with independent uploader value and phase expectations
+        run: node validation/sarif-lifecycle/check-report.mjs lifecycle.sarif
+      - uses: actions/upload-artifact@v4
+        with:
+          name: skillci-sarif-lifecycle-v2-${{ github.sha }}
+          path: lifecycle.sarif
+          if-no-files-found: error
+      - uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: lifecycle.sarif
+          category: skillci-lifecycle-v2-20261105
