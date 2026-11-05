@@ -1,6 +1,6 @@
 {
-  "phase": "baseline",
+  "phase": "shifted",
   "results": [
-    { "ruleId": "SKILLCI001", "line": 4 }
+    { "ruleId": "SKILLCI001", "line": 6 }
   ]
 }
