@@ -10880,9 +10880,64 @@ function escapeGitHub2(value) {
 }
 
 // dist/sarif.js
-var import_node_crypto2 = require("node:crypto");
 var import_node_fs7 = require("node:fs");
 var import_node_path7 = require("node:path");
+
+// dist/sarif-fingerprints.js
+function githubLineFingerprints(source) {
+  const size = 100;
+  const window = new Uint32Array(size);
+  const lines = new Array(size).fill(-1);
+  const firstMod = BigInt.asUintN(64, 37n ** BigInt(size));
+  const counts = /* @__PURE__ */ new Map();
+  const result = /* @__PURE__ */ new Map();
+  let value = 0n;
+  let index = 0;
+  let line = 0;
+  let lineStart = true;
+  let previousCR = false;
+  const output = () => {
+    const hex = value.toString(16);
+    const occurrence = (counts.get(hex) ?? 0) + 1;
+    counts.set(hex, occurrence);
+    result.set(lines[index], `${hex}:${occurrence}`);
+    lines[index] = -1;
+  };
+  const update = (character) => {
+    value = BigInt.asUintN(64, 37n * value + BigInt(character) - firstMod * BigInt(window[index]));
+    window[index] = character;
+    index = (index + 1) % size;
+  };
+  const consume = (character) => {
+    if (character === 32 || character === 9 || previousCR && character === 10) {
+      previousCR = false;
+      return;
+    }
+    previousCR = character === 13;
+    if (previousCR)
+      character = 10;
+    if (lines[index] !== -1)
+      output();
+    if (lineStart) {
+      lineStart = false;
+      lines[index] = ++line;
+    }
+    if (character === 10)
+      lineStart = true;
+    update(character);
+  };
+  for (let i = 0; i < source.length; i++)
+    consume(source.charCodeAt(i));
+  consume(65535);
+  for (let i = 0; i < size; i++) {
+    if (lines[index] !== -1)
+      output();
+    update(0);
+  }
+  return result;
+}
+
+// dist/sarif.js
 function renderSarif(audit2, options = {}) {
   const root = (0, import_node_fs7.realpathSync)((0, import_node_path7.resolve)(options.sourceRoot ?? "."));
   if (!(0, import_node_fs7.statSync)(root).isDirectory())
@@ -10903,7 +10958,7 @@ function renderSarif(audit2, options = {}) {
     ...audit2.findings.map((finding) => ({ finding, suppressed: false })),
     ...audit2.suppressedFindings.map((finding) => ({ finding, suppressed: true }))
   ].sort((a, b) => compare2(a.finding.file, b.finding.file) || a.finding.line - b.finding.line || compare2(a.finding.ruleId, b.finding.ruleId));
-  const occurrences = /* @__PURE__ */ new Map();
+  const fingerprints = /* @__PURE__ */ new Map();
   const results = entries.map(({ finding, suppressed }) => {
     const ruleIndex = metadata.findIndex((rule2) => rule2.ruleId === finding.ruleId);
     if (ruleIndex < 0)
@@ -10914,16 +10969,21 @@ function renderSarif(audit2, options = {}) {
     if (!Number.isInteger(finding.line) || finding.line < 1)
       throw new Error("SARIF requires a positive source line.");
     const uri = local.split(import_node_path7.sep).map(encodeURIComponent).join("/");
-    const key = JSON.stringify([rule.ruleId, uri, finding.excerpt.trim()]);
-    const occurrence = (occurrences.get(key) ?? 0) + 1;
-    occurrences.set(key, occurrence);
+    let sourceFingerprints = fingerprints.get(path2);
+    if (!sourceFingerprints) {
+      sourceFingerprints = githubLineFingerprints((0, import_node_fs7.readFileSync)(path2, "utf8"));
+      fingerprints.set(path2, sourceFingerprints);
+    }
+    const fingerprint = sourceFingerprints.get(finding.line);
+    if (!fingerprint)
+      throw new Error("SARIF source line does not exist.");
     return {
       ruleId: rule.ruleId,
       ruleIndex,
       level: level(rule.severity),
       message: { text: `${rule.detail} ${rule.remediation}` },
       locations: [{ physicalLocation: { artifactLocation: { uri }, region: { startLine: finding.line } } }],
-      partialFingerprints: { primaryLocationLineHash: `${(0, import_node_crypto2.createHash)("sha256").update(key).digest("hex")}:${occurrence}` },
+      partialFingerprints: { primaryLocationLineHash: fingerprint },
       ...suppressed ? { suppressions: [{ kind: "inSource", status: "accepted", justification: "Reviewed inline suppression; inspect the source directive for context." }] } : {}
     };
   });
@@ -11142,4 +11202,30 @@ main(process.argv.slice(2)).catch((error2) => {
   console.error(`SkillCI error: ${error2 instanceof Error ? error2.message : String(error2)}`);
   process.exitCode = 2;
 });
+/*!
+ * Adapted from github/codeql-action src/fingerprints.ts, commit
+ * 33d7b85da1a04171e211befe2c739303b9a4c066. Uses native BigInt instead of Long.
+ *
+ * MIT License
+ *
+ * Copyright (c) 2020 GitHub
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
 //# sourceMappingURL=index.cjs.map

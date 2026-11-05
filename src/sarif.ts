@@ -1,9 +1,9 @@
-import { createHash } from "node:crypto";
-import { realpathSync, statSync } from "node:fs";
+import { readFileSync, realpathSync, statSync } from "node:fs";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { auditRuleMetadata } from "./audit.js";
 import type { AuditResult, Severity } from "./types.js";
 import { TOOL_VERSION } from "./version.js";
+import { githubLineFingerprints } from "./sarif-fingerprints.js";
 
 /** SARIF intentionally excludes source excerpts and user-authored messages. */
 export function renderSarif(audit: AuditResult, options: { sourceRoot?: string } = {}) {
@@ -25,7 +25,7 @@ export function renderSarif(audit: AuditResult, options: { sourceRoot?: string }
     ...audit.findings.map(finding => ({ finding, suppressed: false })),
     ...audit.suppressedFindings.map(finding => ({ finding, suppressed: true }))
   ].sort((a, b) => compare(a.finding.file, b.finding.file) || a.finding.line - b.finding.line || compare(a.finding.ruleId, b.finding.ruleId));
-  const occurrences = new Map<string, number>();
+  const fingerprints = new Map<string, Map<number, string>>();
   const results = entries.map(({ finding, suppressed }) => {
     const ruleIndex = metadata.findIndex(rule => rule.ruleId === finding.ruleId);
     if (ruleIndex < 0) throw new Error("SARIF cannot represent an unknown rule.");
@@ -34,14 +34,18 @@ export function renderSarif(audit: AuditResult, options: { sourceRoot?: string }
     const local = assertContained(root, path);
     if (!Number.isInteger(finding.line) || finding.line < 1) throw new Error("SARIF requires a positive source line.");
     const uri = local.split(sep).map(encodeURIComponent).join("/");
-    const key = JSON.stringify([rule.ruleId, uri, finding.excerpt.trim()]);
-    const occurrence = (occurrences.get(key) ?? 0) + 1;
-    occurrences.set(key, occurrence);
+    let sourceFingerprints = fingerprints.get(path);
+    if (!sourceFingerprints) {
+      sourceFingerprints = githubLineFingerprints(readFileSync(path, "utf8"));
+      fingerprints.set(path, sourceFingerprints);
+    }
+    const fingerprint = sourceFingerprints.get(finding.line);
+    if (!fingerprint) throw new Error("SARIF source line does not exist.");
     return {
       ruleId: rule.ruleId, ruleIndex, level: level(rule.severity),
       message: { text: `${rule.detail} ${rule.remediation}` },
       locations: [{ physicalLocation: { artifactLocation: { uri }, region: { startLine: finding.line } } }],
-      partialFingerprints: { primaryLocationLineHash: `${createHash("sha256").update(key).digest("hex")}:${occurrence}` },
+      partialFingerprints: { primaryLocationLineHash: fingerprint },
       ...(suppressed ? { suppressions: [{ kind: "inSource", status: "accepted", justification: "Reviewed inline suppression; inspect the source directive for context." }] } : {})
     };
   });

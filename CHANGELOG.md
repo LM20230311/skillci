@@ -12,6 +12,12 @@ All notable changes to SkillCI are recorded in this file.
 ### Fixed
 
 - Parse audit options before the target correctly and pass composite Action inputs as quoted environment data instead of interpolating shell source.
+- Generate GitHub-compatible `primaryLocationLineHash` fingerprints instead of placing a custom SHA-256 in that field; validate against fixed upstream vectors and the uploader's observed value. The fix is locally verified, with clean live lifecycle acceptance still pending.
+- Reject SARIF findings whose source line does not exist. Preserve upstream fingerprint attribution in source, bundle and npm notices without adding runtime dependencies.
+
+### Documentation
+
+- Record live SARIF upload, same-commit and limited cross-commit alert reuse; document the newly observed fingerprint compatibility warning, stopped lifecycle sequence and pending resolution/fork PR verification.
 
 ## [0.5.0] - 2026-11-05
 

@@ -1,0 +1,15 @@
+{
+  "sourceCommit": "33d7b85da1a04171e211befe2c739303b9a4c066",
+  "source": "https://github.com/github/codeql-action/blob/33d7b85da1a04171e211befe2c739303b9a4c066/src/fingerprints.test.ts",
+  "cases": [
+    { "name": "empty", "source": "", "hashes": ["c129715d7a2bc9a3:1"] },
+    { "name": "spaces-tabs-no-final-newline", "source": " a\nb\n  \t\tc\n d", "hashes": ["271789c17abda88f:1", "54703d4cd895b18:1", "180aee12dab6264:1", "a23a3dc5e078b07b:1"] },
+    { "name": "blank-lines-no-final-newline", "source": " hello; \t\nworld!!!\n\n\n  \t\tGreetings\n End", "hashes": ["8b7cf3e952e7aeb2:1", "b1ae1287ec4718d9:1", "bff680108adb0fcc:1", "c6805c5e1288b612:1", "b86d3392aea1be30:1", "e6ceba753e1a442:1"] },
+    { "name": "LF", "source": " hello; \t\nworld!!!\n\n\n  \t\tGreetings\n End\n", "hashes": ["e9496ae3ebfced30:1", "fb7c023a8b9ccb3f:1", "ce8ba1a563dcdaca:1", "e20e36e16fcb0cc8:1", "b3edc88f2938467e:1", "c8e28b0b4002a3a0:1", "c129715d7a2bc9a3:1"] },
+    { "name": "CR", "source": " hello; \t\nworld!!!\r\r\r  \t\tGreetings\r End\r", "hashes": ["e9496ae3ebfced30:1", "fb7c023a8b9ccb3f:1", "ce8ba1a563dcdaca:1", "e20e36e16fcb0cc8:1", "b3edc88f2938467e:1", "c8e28b0b4002a3a0:1", "c129715d7a2bc9a3:1"] },
+    { "name": "CRLF", "source": " hello; \t\r\nworld!!!\r\n\r\n\r\n  \t\tGreetings\r\n End\r\n", "hashes": ["e9496ae3ebfced30:1", "fb7c023a8b9ccb3f:1", "ce8ba1a563dcdaca:1", "e20e36e16fcb0cc8:1", "b3edc88f2938467e:1", "c8e28b0b4002a3a0:1", "c129715d7a2bc9a3:1"] },
+    { "name": "mixed-newlines", "source": " hello; \t\nworld!!!\r\n\n\r  \t\tGreetings\r End\r\n", "hashes": ["e9496ae3ebfced30:1", "fb7c023a8b9ccb3f:1", "ce8ba1a563dcdaca:1", "e20e36e16fcb0cc8:1", "b3edc88f2938467e:1", "c8e28b0b4002a3a0:1", "c129715d7a2bc9a3:1"] },
+    { "name": "repeated-window-ordinals", "source": "Lorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\nLorem ipsum dolor sit amet.\n", "hashes": ["a7f2ff13bc495cf2:1", "a7f2ff13bc495cf2:2", "a7f2ff13bc495cf2:3", "a7f2ff13bc495cf2:4", "a7f2ff13bc495cf2:5", "a7f2ff13bc495cf2:6", "a7f2ff1481e87703:1", "a9cf91f7bbf1862b:1", "55ec222b86bcae53:1", "cc97dc7b1d7d8f7b:1", "c129715d7a2bc9a3:1"] },
+    { "name": "same-line-different-following-context", "source": "x = 2\nx = 1\nprint(x)\nx = 3\nprint(x)\nx = 4\nprint(x)\n", "hashes": ["e54938cc54b302f1:1", "bb609acbe9138d60:1", "1131fd5871777f34:1", "5c482a0f8b35ea28:1", "54517377da7028d2:1", "2c644846cb18d53e:1", "f1b89f20de0d133:1", "c129715d7a2bc9a3:1"] }
+  ]
+}
