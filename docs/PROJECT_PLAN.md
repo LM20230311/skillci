@@ -14,6 +14,8 @@
 
 本轮本地验证：Node 20 与 Node 22 下各 57 项测试通过；代表性 Action bundle 报告、官方 schema 回归、`npm pack --dry-run`（61 个文件且包含第三方许可）、Markdown/相对链接及 `git diff --check` 通过，`npm audit` 为 0 项漏洞。版本未提升，不将本地修复写成线上已验收。
 
+本地修复已提交为 `2ecbbf6`，并在新隔离分支准备 baseline `2a2ea20`、shifted `3911312`、fixed `fefeb42`；三份报告本地断言和官方 schema 校验均通过。新的[线上验收计划](SARIF_LIFECYCLE_V2_PLAN.md)列明全部来源提交、目标 ref、逐步检查和停止条件。尚未推送新分支或远端 main。
+
 ## 产品北极星
 
 让 Agent Skill 像应用代码一样，拥有可评审的权限策略、可重复运行的安全回归测试，以及能阻止风险变更进入主分支的 CI 检查。
