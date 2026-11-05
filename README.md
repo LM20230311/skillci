@@ -257,6 +257,8 @@ SkillCI still reports the suppression, its location, and its reviewed reason in 
 
 ## Make it part of CI
 
+Source-checkout preview for v0.6.0: `audit --format sarif --source-root . --output skillci.sarif`, plus optional Action input `sarif-output`. See [SARIF integration, privacy, and upload examples](docs/SARIF.md). This preview is not included in the published v0.5.0 CLI/Action; live Code Scanning acceptance is pending.
+
 Once you publish a release, add this to a workflow in the repository that owns the Skills:
 
 ```yaml
@@ -377,7 +379,7 @@ skillci init [directory]
 skillci discover [path] [--format markdown|json]
 
 # Audit a file or directory.
-skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
+skillci audit <path> [--policy <file>] [--format markdown|json|github|sarif] [--source-root <directory>] [--output <file>] [--no-fail]
 
 # Produce a Markdown report.
 skillci report <path> [--policy <file>] [--output <file>] [--no-fail]

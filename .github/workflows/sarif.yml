@@ -1,0 +1,39 @@
+name: SARIF integration example
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  sarif:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - name: Audit intentionally risky example
+        uses: ./
+        with:
+          path: examples/risky-skill
+          sarif-output: skillci-example.sarif
+          fail-on-risk: "false"
+      - name: Keep SARIF artifact, including on fork PRs
+        if: ${{ always() && hashFiles('skillci-example.sarif') != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: skillci-sarif-example
+          path: skillci-example.sarif
+      - name: Upload example findings to Code Scanning
+        if: ${{ always() && github.event_name == 'push' && hashFiles('skillci-example.sarif') != '' }}
+        uses: github/codeql-action/upload-sarif@v4
+        with:
+          sarif_file: skillci-example.sarif
+          category: skillci-example

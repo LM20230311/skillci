@@ -2,11 +2,11 @@
 
 > 这份文件是 SkillCI 的单一迭代记录。每次开发开始前确认当前阶段；每次合并或发布后更新状态、验收结果、版本和下一步。
 
-**当前阶段：** Phase 4 — Agent 宿主适配
-**当前版本：** `v0.4.1`
+**当前阶段：** Phase 4 已发布，体验验收待办；下一里程碑 `v0.6.0` — SARIF
+**当前版本：** `v0.5.0`
 **最后更新：** 2026-11-05
 
-**当前迭代：** 准备 `v0.5.0` 双渠道发布。自动发现实现已推送，远程 [CI 41956203345](https://github.com/LM20230311/skillci/actions/runs/41956203345) 通过；发布版本提交及其 CI、tag/Release、npm 验证待完成。正式版本仍是 `v0.4.1`。用户于 2026-11-05 要求发布，独立新用户的五分钟体验验收保留为发布后待办，不计为已通过。下一功能里程碑为 `v0.6.0` SARIF。
+**当前迭代：** 本地实现 `v0.6.0` SARIF 源码预览：序列化、固定规则元数据、稳定指纹、抑制映射、Action 可选输出、schema 校验与双语接入文档已完成。实际 Code Scanning 上传、去重/关闭和 fork PR 验证待推送后完成。正式版本仍为 `v0.5.0`；其 [发布版本 CI](https://github.com/LM20230311/skillci/actions/runs/41957607994)、[OIDC 发布](https://github.com/LM20230311/skillci/actions/runs/41957731831)、latest、provenance 与独立安装均已核验。独立新用户体验仍为待办。
 
 ## 产品北极星
 
@@ -27,7 +27,7 @@
 | Phase 1 | 发布可安装、可演示的 MVP | 公开仓库、CI、首个 Release、完整 README | ✅ 完成 |
 | Phase 2 | 让策略可靠地表达边界 | 路径/命令/网络规则更准确，减少误报 | ✅ 完成 |
 | Phase 3 | 验证 Skill 的实际行为 | 隔离 fixture、行为断言、可复现执行记录 | ✅ 完成 |
-| Phase 4 | 接入主流 Agent 生态 | Codex、Claude Code、Cursor、Copilot 适配器 | 🟡 远程 CI 通过，准备发布 |
+| Phase 4 | 接入主流 Agent 生态 | Codex、Claude Code、Cursor、Copilot 适配器 | 🟡 已发布，独立体验验收待办 |
 | Phase 5 | 建立社区与可信基准 | 规则包、样本库、贡献流程、使用案例 | ⏳ 待开始 |
 
 ---
@@ -91,6 +91,7 @@
 | 2026-07-11 | `v0.3.1` | Marketplace 元数据修复并正式上架：Action 展示名为唯一的 `SkillCI Audit`。 |
 | 2026-07-11 | `v0.3.2` | 首个 npm CLI 分发：`skillci@0.3.2` 已作为 `latest` 公开发布并完成独立安装验证。 |
 | 2026-07-11 | `v0.4.1` | Phase 3 完成：严格断言 Node runner 的命令、读写与网络 API 尝试；[GitHub Release](https://github.com/LM20230311/skillci/releases/tag/v0.4.1) 与 [npm 包](https://www.npmjs.com/package/skillci/v/0.4.1) 均已公开验证。 |
+| 2026-11-05 | `v0.5.0` | [GitHub Release](https://github.com/LM20230311/skillci/releases/tag/v0.5.0)、Marketplace tag 与 [npm latest](https://www.npmjs.com/package/skillci/v/0.5.0) 已核验；新增四宿主只读发现与 JSON v1，修复匹配依赖漏洞。 |
 
 ---
 
@@ -194,13 +195,13 @@
 - [x] 在三个固定 commit 的公开仓库核对发现清单：[验证记录](DISCOVERY_VALIDATION.md)。这不是安全基准或外部采用。
 - [ ] 独立新用户按 README 在 5 分钟内完成发现与审计，记录卡点。
 - [x] 自动发现实现已推送，远程 CI 通过：[run 41956203345](https://github.com/LM20230311/skillci/actions/runs/41956203345)。
-- [ ] 发布版本提交通过远程 CI，并按双渠道流程发布 `v0.5.0`，核验 npm latest 与独立安装。
+- [x] 发布版本提交通过远程 CI，并按双渠道流程发布 `v0.5.0`；npm latest 为 0.5.0，仓库外帮助命令与 discover 示例均正常，provenance 元数据已确认。
 
 ### 本次实现与验证范围
 
 宿主约定于 2026-11-04 核验官方来源，详见 [发现契约](DISCOVERY.zh-CN.md)。测试覆盖共享文件去重、嵌套目录、空结果、忽略目录、符号链接、权限错误、深度限制、CLI 参数和 JSON 样例。发现器不执行文件，不自动读取全局目录。同步补充 `.mdc`、`.cursorrules` 的现有静态审计支持。
 
-本地验证：36 项测试通过，Action bundle 发现命令、发现后审计示例、三个固定 commit 的公开仓库清单验证和 `npm pack --dry-run` 通过；双语 Markdown、相对链接及 `git diff --check` 检查通过。`v0.5.0` 发布准备中，发布结果待核验。
+本地验证：36 项测试通过，Action bundle 发现命令、发现后审计示例、三个固定 commit 的公开仓库清单验证和 `npm pack --dry-run` 通过；双语 Markdown、相对链接及 `git diff --check` 检查通过。`v0.5.0` 双渠道发布结果已核验。
 
 2026-11-05 发布候选复核：Node 20 和 Node 22 下各 36 项测试通过；干净安装发现的依赖漏洞已通过升级 `minimatch@11.0.4`、`brace-expansion@5.0.12` 修复，`npm audit` 当前报告 0 项漏洞；升级后公开样本清单和发现后审计示例仍通过。
 
@@ -213,6 +214,21 @@
 ---
 
 ## Phase 5 — 社区、基准与采用
+
+### v0.6.0 — SARIF 接入迭代（2026-11-05）
+
+- [x] 实现 `audit --format sarif --source-root <directory>`；默认以当前目录为源码根，输出相对 URI。
+- [x] 固定 12 条规则的说明、建议和等级；保留规则 ID 与 in-source suppression，不把原始片段或自由理由写入 SARIF。
+- [x] 指纹在 checkout 迁移、前置无关行后保持稳定；对重复出现的同一片段保留序号。
+- [x] 单文件、子目录、Unicode/特殊字符路径、越界和豁免场景测试；官方 SARIF 2.1.0 schema 校验。
+- [x] Action 可选 `sarif-output`、`sarif-file` 输出；先写报告再执行原有风险门禁，输入作为环境变量数据传递。
+- [x] 双语文档说明权限、私有仓库限制、fork PR artifact 回退、多目标独立 category 和源码预览状态。
+- [x] 新增独立 SARIF CI：只在 main push 时上传刻意危险示例的 Code Scanning 结果，PR 保留 artifact。
+- [ ] 推送并验证真实上传，核对告警 URI 与源文件行。
+- [ ] 真实重跑与修复验证 GitHub 告警去重/关闭；验证 fork PR 回退。
+- [ ] 完成发布验收后，再发布 v0.6.0 双渠道版本。
+
+Node 20 和 Node 22 下本地测试各 44 项通过，Action Shell 接线测试、代表性 bundle 命令、打包、YAML/Markdown 与相对链接检查通过；npm audit 当前报告 0 项漏洞。Ajv/ajv-formats 仅作为开发依赖，官方 schema 快照、来源与上游许可说明存入仓库。当前不把 schema 通过等同于 GitHub 接入验收通过。
 
 **目标：** 让规则与样本库成为项目的长期护城河。
 

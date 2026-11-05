@@ -3991,10 +3991,10 @@ var require_resolve_block_map = __commonJS({
       let offset = bm.offset;
       let commentEnd = null;
       for (const collItem of bm.items) {
-        const { start, key, sep: sep3, value } = collItem;
+        const { start, key, sep: sep4, value } = collItem;
         const keyProps = resolveProps.resolveProps(start, {
           indicator: "explicit-key-ind",
-          next: key ?? sep3?.[0],
+          next: key ?? sep4?.[0],
           offset,
           onError,
           parentIndent: bm.indent,
@@ -4008,7 +4008,7 @@ var require_resolve_block_map = __commonJS({
             else if ("indent" in key && key.indent !== bm.indent)
               onError(offset, "BAD_INDENT", startColMsg);
           }
-          if (!keyProps.anchor && !keyProps.tag && !sep3) {
+          if (!keyProps.anchor && !keyProps.tag && !sep4) {
             commentEnd = keyProps.end;
             if (keyProps.comment) {
               if (map.comment)
@@ -4032,7 +4032,7 @@ var require_resolve_block_map = __commonJS({
         ctx.atKey = false;
         if (utilMapIncludes.mapIncludes(ctx, map.items, keyNode))
           onError(keyStart, "DUPLICATE_KEY", "Map keys must be unique");
-        const valueProps = resolveProps.resolveProps(sep3 ?? [], {
+        const valueProps = resolveProps.resolveProps(sep4 ?? [], {
           indicator: "map-value-ind",
           next: value,
           offset: keyNode.range[2],
@@ -4048,7 +4048,7 @@ var require_resolve_block_map = __commonJS({
             if (ctx.options.strict && keyProps.start < valueProps.found.offset - 1024)
               onError(keyNode.range, "KEY_OVER_1024_CHARS", "The : indicator must be at most 1024 chars after the start of an implicit block mapping key");
           }
-          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : composeEmptyNode(ctx, offset, sep3, null, valueProps, onError);
+          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : composeEmptyNode(ctx, offset, sep4, null, valueProps, onError);
           if (ctx.schema.compat)
             utilFlowIndentCheck.flowIndentCheck(bm.indent, value, onError);
           offset = valueNode.range[2];
@@ -4139,7 +4139,7 @@ var require_resolve_end = __commonJS({
       let comment = "";
       if (end) {
         let hasSpace = false;
-        let sep3 = "";
+        let sep4 = "";
         for (const token of end) {
           const { source, type } = token;
           switch (type) {
@@ -4153,13 +4153,13 @@ var require_resolve_end = __commonJS({
               if (!comment)
                 comment = cb;
               else
-                comment += sep3 + cb;
-              sep3 = "";
+                comment += sep4 + cb;
+              sep4 = "";
               break;
             }
             case "newline":
               if (comment)
-                sep3 += source;
+                sep4 += source;
               hasSpace = true;
               break;
             default:
@@ -4202,18 +4202,18 @@ var require_resolve_flow_collection = __commonJS({
       let offset = fc.offset + fc.start.source.length;
       for (let i = 0; i < fc.items.length; ++i) {
         const collItem = fc.items[i];
-        const { start, key, sep: sep3, value } = collItem;
+        const { start, key, sep: sep4, value } = collItem;
         const props = resolveProps.resolveProps(start, {
           flow: fcName,
           indicator: "explicit-key-ind",
-          next: key ?? sep3?.[0],
+          next: key ?? sep4?.[0],
           offset,
           onError,
           parentIndent: fc.indent,
           startOnNewline: false
         });
         if (!props.found) {
-          if (!props.anchor && !props.tag && !sep3 && !value) {
+          if (!props.anchor && !props.tag && !sep4 && !value) {
             if (i === 0 && props.comma)
               onError(props.comma, "UNEXPECTED_TOKEN", `Unexpected , in ${fcName}`);
             else if (i < fc.items.length - 1)
@@ -4267,8 +4267,8 @@ var require_resolve_flow_collection = __commonJS({
             }
           }
         }
-        if (!isMap && !sep3 && !props.found) {
-          const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep3, null, props, onError);
+        if (!isMap && !sep4 && !props.found) {
+          const valueNode = value ? composeNode(ctx, value, props, onError) : composeEmptyNode(ctx, props.end, sep4, null, props, onError);
           coll.items.push(valueNode);
           offset = valueNode.range[2];
           if (isBlock(value))
@@ -4280,7 +4280,7 @@ var require_resolve_flow_collection = __commonJS({
           if (isBlock(key))
             onError(keyNode.range, "BLOCK_IN_FLOW", blockMsg);
           ctx.atKey = false;
-          const valueProps = resolveProps.resolveProps(sep3 ?? [], {
+          const valueProps = resolveProps.resolveProps(sep4 ?? [], {
             flow: fcName,
             indicator: "map-value-ind",
             next: value,
@@ -4291,8 +4291,8 @@ var require_resolve_flow_collection = __commonJS({
           });
           if (valueProps.found) {
             if (!isMap && !props.found && ctx.options.strict) {
-              if (sep3)
-                for (const st of sep3) {
+              if (sep4)
+                for (const st of sep4) {
                   if (st === valueProps.found)
                     break;
                   if (st.type === "newline") {
@@ -4309,7 +4309,7 @@ var require_resolve_flow_collection = __commonJS({
             else
               onError(valueProps.start, "MISSING_CHAR", `Missing , or : between ${fcName} items`);
           }
-          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : valueProps.found ? composeEmptyNode(ctx, valueProps.end, sep3, null, valueProps, onError) : null;
+          const valueNode = value ? composeNode(ctx, value, valueProps, onError) : valueProps.found ? composeEmptyNode(ctx, valueProps.end, sep4, null, valueProps, onError) : null;
           if (valueNode) {
             if (isBlock(value))
               onError(valueNode.range, "BLOCK_IN_FLOW", blockMsg);
@@ -4489,7 +4489,7 @@ var require_resolve_block_scalar = __commonJS({
           chompStart = i + 1;
       }
       let value = "";
-      let sep3 = "";
+      let sep4 = "";
       let prevMoreIndented = false;
       for (let i = 0; i < contentStart; ++i)
         value += lines[i][0].slice(trimIndent) + "\n";
@@ -4506,24 +4506,24 @@ var require_resolve_block_scalar = __commonJS({
           indent = "";
         }
         if (type === Scalar.Scalar.BLOCK_LITERAL) {
-          value += sep3 + indent.slice(trimIndent) + content;
-          sep3 = "\n";
+          value += sep4 + indent.slice(trimIndent) + content;
+          sep4 = "\n";
         } else if (indent.length > trimIndent || content[0] === "	") {
-          if (sep3 === " ")
-            sep3 = "\n";
-          else if (!prevMoreIndented && sep3 === "\n")
-            sep3 = "\n\n";
-          value += sep3 + indent.slice(trimIndent) + content;
-          sep3 = "\n";
+          if (sep4 === " ")
+            sep4 = "\n";
+          else if (!prevMoreIndented && sep4 === "\n")
+            sep4 = "\n\n";
+          value += sep4 + indent.slice(trimIndent) + content;
+          sep4 = "\n";
           prevMoreIndented = true;
         } else if (content === "") {
-          if (sep3 === "\n")
+          if (sep4 === "\n")
             value += "\n";
           else
-            sep3 = "\n";
+            sep4 = "\n";
         } else {
-          value += sep3 + content;
-          sep3 = " ";
+          value += sep4 + content;
+          sep4 = " ";
           prevMoreIndented = false;
         }
       }
@@ -4705,25 +4705,25 @@ var require_resolve_flow_scalar = __commonJS({
       if (!match2)
         return source;
       let res = match2[1];
-      let sep3 = " ";
+      let sep4 = " ";
       let pos = first.lastIndex;
       line.lastIndex = pos;
       while (match2 = line.exec(source)) {
         if (match2[1] === "") {
-          if (sep3 === "\n")
-            res += sep3;
+          if (sep4 === "\n")
+            res += sep4;
           else
-            sep3 = "\n";
+            sep4 = "\n";
         } else {
-          res += sep3 + match2[1];
-          sep3 = " ";
+          res += sep4 + match2[1];
+          sep4 = " ";
         }
         pos = line.lastIndex;
       }
       const last = /[ \t]*(.*)/sy;
       last.lastIndex = pos;
       match2 = last.exec(source);
-      return res + sep3 + (match2?.[1] ?? "");
+      return res + sep4 + (match2?.[1] ?? "");
     }
     function doubleQuotedValue(source, onError) {
       let res = "";
@@ -5533,14 +5533,14 @@ var require_cst_stringify = __commonJS({
         }
       }
     }
-    function stringifyItem({ start, key, sep: sep3, value }) {
+    function stringifyItem({ start, key, sep: sep4, value }) {
       let res = "";
       for (const st of start)
         res += st.source;
       if (key)
         res += stringifyToken(key);
-      if (sep3)
-        for (const st of sep3)
+      if (sep4)
+        for (const st of sep4)
           res += st.source;
       if (value)
         res += stringifyToken(value);
@@ -6707,18 +6707,18 @@ var require_parser = __commonJS({
         if (this.type === "map-value-ind") {
           const prev = getPrevProps(this.peek(2));
           const start = getFirstKeyStartProps(prev);
-          let sep3;
+          let sep4;
           if (scalar.end) {
-            sep3 = scalar.end;
-            sep3.push(this.sourceToken);
+            sep4 = scalar.end;
+            sep4.push(this.sourceToken);
             delete scalar.end;
           } else
-            sep3 = [this.sourceToken];
+            sep4 = [this.sourceToken];
           const map = {
             type: "block-map",
             offset: scalar.offset,
             indent: scalar.indent,
-            items: [{ start, key: scalar, sep: sep3 }]
+            items: [{ start, key: scalar, sep: sep4 }]
           };
           this.onKeyLine = true;
           this.stack[this.stack.length - 1] = map;
@@ -6871,15 +6871,15 @@ var require_parser = __commonJS({
                 } else if (isFlowToken(it.key) && !includesToken(it.sep, "newline")) {
                   const start2 = getFirstKeyStartProps(it.start);
                   const key = it.key;
-                  const sep3 = it.sep;
-                  sep3.push(this.sourceToken);
+                  const sep4 = it.sep;
+                  sep4.push(this.sourceToken);
                   delete it.key;
                   delete it.sep;
                   this.stack.push({
                     type: "block-map",
                     offset: this.offset,
                     indent: this.indent,
-                    items: [{ start: start2, key, sep: sep3 }]
+                    items: [{ start: start2, key, sep: sep4 }]
                   });
                 } else if (start.length > 0) {
                   it.sep = it.sep.concat(start, this.sourceToken);
@@ -7073,13 +7073,13 @@ var require_parser = __commonJS({
             const prev = getPrevProps(parent);
             const start = getFirstKeyStartProps(prev);
             fixFlowSeqItems(fc);
-            const sep3 = fc.end.splice(1, fc.end.length);
-            sep3.push(this.sourceToken);
+            const sep4 = fc.end.splice(1, fc.end.length);
+            sep4.push(this.sourceToken);
             const map = {
               type: "block-map",
               offset: fc.offset,
               indent: fc.indent,
-              items: [{ start, key: fc, sep: sep3 }]
+              items: [{ start, key: fc, sep: sep4 }]
             };
             this.onKeyLine = true;
             this.stack[this.stack.length - 1] = map;
@@ -7358,7 +7358,7 @@ var require_dist = __commonJS({
 });
 
 // dist/index.js
-var import_node_fs7 = require("node:fs");
+var import_node_fs8 = require("node:fs");
 
 // dist/audit.js
 var import_node_fs2 = require("node:fs");
@@ -8610,33 +8610,33 @@ var uncHost = (p) => {
   return h !== -1 && host !== void 0 && host !== "" && host !== GLOBSTAR && share !== void 0 && share !== "" && share !== GLOBSTAR ? h : -1;
 };
 var walkable = (p, dot) => !isDots(p) && (dot || !p.startsWith("."));
-var dotPortion = (f, start, end, dot, sep3) => {
+var dotPortion = (f, start, end, dot, sep4) => {
   for (let k = start; k < end; ) {
     if (f.charCodeAt(k) === 46) {
       if (!dot)
         return true;
       const n = f.charCodeAt(k + 1) === 46 ? k + 2 : k + 1;
-      if (n >= end || isSep(f.charCodeAt(n), sep3))
+      if (n >= end || isSep(f.charCodeAt(n), sep4))
         return true;
     }
-    const s = nextSep(f, k, sep3);
+    const s = nextSep(f, k, sep4);
     if (s === -1)
       return false;
     k = s + 1;
-    while (k < end && isSep(f.charCodeAt(k), sep3))
+    while (k < end && isSep(f.charCodeAt(k), sep4))
       k++;
   }
   return false;
 };
-var isSep = (c, sep3) => sep3 === "/" ? c === 47 : sep3 === "\\" ? c === 92 : c === 47 || c === 92;
-var nextSep = (f, from, sep3) => {
-  if (sep3 !== "both")
-    return f.indexOf(sep3, from);
+var isSep = (c, sep4) => sep4 === "/" ? c === 47 : sep4 === "\\" ? c === 92 : c === 47 || c === 92;
+var nextSep = (f, from, sep4) => {
+  if (sep4 !== "both")
+    return f.indexOf(sep4, from);
   const s = f.indexOf("/", from);
   const b = f.indexOf("\\", from);
   return s === -1 ? b : b === -1 ? s : Math.min(s, b);
 };
-var lastSep = (f, from, sep3) => sep3 !== "both" ? f.lastIndexOf(sep3, from) : Math.max(f.lastIndexOf("/", from), f.lastIndexOf("\\", from));
+var lastSep = (f, from, sep4) => sep4 !== "both" ? f.lastIndexOf(sep4, from) : Math.max(f.lastIndexOf("/", from), f.lastIndexOf("\\", from));
 var PENDING = {};
 var Minimatch = class {
   options;
@@ -8958,7 +8958,7 @@ var Minimatch = class {
   // level 2, this is only known if none of them are `.` or `..`, so
   // that the path does not change when it is resolved.
   #canMatch(f) {
-    const sep3 = !this.isWindows || !f.includes("\\") ? "/" : f.includes("/") ? "both" : "\\";
+    const sep4 = !this.isWindows || !f.includes("\\") ? "/" : f.includes("/") ? "both" : "\\";
     let ends = this.#endCheck ? 0 : -1;
     let last = "";
     let lastStart = 0;
@@ -8970,14 +8970,14 @@ var Minimatch = class {
       const p = row[row.length - 1];
       let end = ends !== -1 && this.#endRows[r] && p !== GLOBSTAR;
       if (end && ends === 0) {
-        const i = lastSep(f, f.length, sep3);
+        const i = lastSep(f, f.length, sep4);
         lastStart = i + 1;
         last = f.slice(lastStart);
         if (last === "" && i >= 0) {
           let j = i;
-          while (j > 0 && isSep(f.charCodeAt(j - 1), sep3))
+          while (j > 0 && isSep(f.charCodeAt(j - 1), sep4))
             j--;
-          prevStart = j === 0 ? 0 : lastSep(f, j - 1, sep3) + 1;
+          prevStart = j === 0 ? 0 : lastSep(f, j - 1, sep4) + 1;
           prev = f.slice(prevStart, j);
         }
         const resolves = this.#level2 && (isDots(last) || last === "" && prev !== void 0 && isDots(prev));
@@ -9005,15 +9005,15 @@ var Minimatch = class {
       if (shape === "base" && end)
         return "yes";
       if (shape === "tail" && end) {
-        if (this.#level2 && dotPortion(f, 0, tailStart, true, sep3)) {
+        if (this.#level2 && dotPortion(f, 0, tailStart, true, sep4)) {
           return "maybe";
         }
-        if (!dotPortion(f, 0, tailStart, dot, sep3))
+        if (!dotPortion(f, 0, tailStart, dot, sep4))
           return "yes";
         continue;
       }
       if (shape === "mid" || shape === "head") {
-        const m = this.#walk(f, row, shape === "head", dot, sep3);
+        const m = this.#walk(f, row, shape === "head", dot, sep4);
         if (m !== "no")
           return m;
         continue;
@@ -9069,19 +9069,19 @@ var Minimatch = class {
   // it must be able to walk the portions before that one, and there
   // must be a portion after it, which the ** after it can walk. At
   // level 2, this is only known if no portion is `.` or `..`.
-  #walk(f, row, head, dot, sep3) {
-    if (this.#level2 && dotPortion(f, 0, f.length, true, sep3))
+  #walk(f, row, head, dot, sep4) {
+    if (this.#level2 && dotPortion(f, 0, f.length, true, sep4))
       return "maybe";
     const x = row[head ? 0 : 1];
     let s = 0;
-    for (let e = nextSep(f, s, sep3); e !== -1; e = nextSep(f, s, sep3)) {
+    for (let e = nextSep(f, s, sep4); e !== -1; e = nextSep(f, s, sep4)) {
       let next = e + 1;
-      while (next < f.length && isSep(f.charCodeAt(next), sep3))
+      while (next < f.length && isSep(f.charCodeAt(next), sep4))
         next++;
       const hit = typeof x === "string" ? e - s === x.length && f.startsWith(x, s) : e > s && x.testUnchecked(f.slice(s, e));
-      if (hit && !dotPortion(f, next, f.length, dot, sep3))
+      if (hit && !dotPortion(f, next, f.length, dot, sep4))
         return "yes";
-      if (head || dotPortion(f, s, next, dot, sep3))
+      if (head || dotPortion(f, s, next, dot, sep4))
         return "no";
       s = next;
     }
@@ -9719,10 +9719,10 @@ function renderPolicyDiff(diff) {
 function renderPolicyDiffGitHub(diff) {
   const file = (0, import_node_path.relative)(process.cwd(), diff.after.path) || diff.after.path;
   const annotations = diff.changes.map((change) => {
-    const level = change.kind === "permission-added" ? "warning" : "notice";
+    const level2 = change.kind === "permission-added" ? "warning" : "notice";
     const title = change.kind === "permission-added" ? "SkillCI policy permission expansion" : "SkillCI policy change";
     const action = change.kind.replace(/-/g, " ");
-    return `::${level} file=${escapeGitHub(file)},line=1,title=${escapeGitHub(title)}::${escapeGitHub(`${action}: ${change.field} ${change.value}`)}`;
+    return `::${level2} file=${escapeGitHub(file)},line=1,title=${escapeGitHub(title)}::${escapeGitHub(`${action}: ${change.field} ${change.value}`)}`;
   });
   const summary = `::notice title=SkillCI policy diff::${diff.changes.length} policy change(s), ${diff.changes.filter((change) => change.kind === "permission-added").length} permission expansion(s).`;
   return [...annotations, summary].join("\n");
@@ -10058,6 +10058,19 @@ function matchesCommand(line, deniedCommand) {
 function withoutPattern(rule) {
   const { pattern: _pattern, ...finding } = rule;
   return finding;
+}
+function auditRuleMetadata() {
+  return [
+    ...RULES.map(withoutPattern),
+    ...[
+      ["SKILLCI101", "Policy denies network access", "Network access violates the selected policy.", "Remove the request or approve a narrowly scoped host."],
+      ["SKILLCI102", "Policy denies path access", "A referenced path violates the selected policy.", "Remove the access or review a narrower policy exception."],
+      ["SKILLCI103", "Policy denies command", "A command violates the selected policy.", "Remove the command or approve a narrowly scoped exception."],
+      ["SKILLCI104", "Network host is not allowlisted", "A network host cannot be verified against the selected allowlist.", "Use a reviewed host covered by the policy."],
+      ["SKILLCI105", "Policy denies working directory", "A working directory violates the selected policy.", "Run from an approved directory or review the policy."],
+      ["SKILLCI106", "Invalid suppression directive", "An inline suppression is invalid.", "Use an existing rule ID and a concise quoted reason for the next line only."]
+    ].map(([ruleId, title, detail, remediation]) => ({ ruleId, title, detail, remediation, severity: "high" }))
+  ];
 }
 function collectFiles(target) {
   const targetStats = (0, import_node_fs2.statSync)(target);
@@ -10829,8 +10842,8 @@ ${renderSuppressions(result.suppressedFindings)}`;
 }
 function renderGitHubAnnotations(result) {
   const annotations = result.findings.map((finding) => {
-    const level = finding.severity === "critical" || finding.severity === "high" ? "error" : "warning";
-    return `::${level} file=${escapeGitHub2(finding.file)},line=${finding.line},title=${finding.ruleId} ${escapeGitHub2(finding.title)}::${escapeGitHub2(finding.detail)}`;
+    const level2 = finding.severity === "critical" || finding.severity === "high" ? "error" : "warning";
+    return `::${level2} file=${escapeGitHub2(finding.file)},line=${finding.line},title=${finding.ruleId} ${escapeGitHub2(finding.title)}::${escapeGitHub2(finding.detail)}`;
   });
   const suppressions = result.suppressedFindings.map((finding) => `::notice file=${escapeGitHub2(finding.file)},line=${finding.line},title=${finding.ruleId} suppressed::${escapeGitHub2(finding.reason)}`);
   const summary = `::notice title=SkillCI audit::${result.findings.length} active finding(s), ${result.suppressedFindings.length} suppressed; risk score: ${result.score}.`;
@@ -10866,13 +10879,80 @@ function escapeGitHub2(value) {
   return value.replace(/[\r\n]/g, " ").replace(/%/g, "%25").replace(/:/g, "%3A").replace(/,/g, "%2C");
 }
 
+// dist/sarif.js
+var import_node_crypto2 = require("node:crypto");
+var import_node_fs7 = require("node:fs");
+var import_node_path7 = require("node:path");
+function renderSarif(audit2, options = {}) {
+  const root = (0, import_node_fs7.realpathSync)((0, import_node_path7.resolve)(options.sourceRoot ?? "."));
+  if (!(0, import_node_fs7.statSync)(root).isDirectory())
+    throw new Error("SARIF --source-root must be a directory.");
+  const target = (0, import_node_fs7.realpathSync)(audit2.target);
+  assertContained(root, target);
+  const base = (0, import_node_fs7.statSync)(target).isDirectory() ? target : (0, import_node_path7.dirname)(target);
+  const metadata = auditRuleMetadata();
+  const rules = metadata.map((rule) => ({
+    id: rule.ruleId,
+    shortDescription: { text: rule.title },
+    fullDescription: { text: rule.detail },
+    help: { text: rule.remediation },
+    defaultConfiguration: { level: level(rule.severity) },
+    properties: { tags: ["security", "agent-skills"], skillciSeverity: rule.severity }
+  }));
+  const entries = [
+    ...audit2.findings.map((finding) => ({ finding, suppressed: false })),
+    ...audit2.suppressedFindings.map((finding) => ({ finding, suppressed: true }))
+  ].sort((a, b) => compare2(a.finding.file, b.finding.file) || a.finding.line - b.finding.line || compare2(a.finding.ruleId, b.finding.ruleId));
+  const occurrences = /* @__PURE__ */ new Map();
+  const results = entries.map(({ finding, suppressed }) => {
+    const ruleIndex = metadata.findIndex((rule2) => rule2.ruleId === finding.ruleId);
+    if (ruleIndex < 0)
+      throw new Error("SARIF cannot represent an unknown rule.");
+    const rule = metadata[ruleIndex];
+    const path2 = (0, import_node_fs7.realpathSync)((0, import_node_path7.resolve)(base, finding.file));
+    const local = assertContained(root, path2);
+    if (!Number.isInteger(finding.line) || finding.line < 1)
+      throw new Error("SARIF requires a positive source line.");
+    const uri = local.split(import_node_path7.sep).map(encodeURIComponent).join("/");
+    const key = JSON.stringify([rule.ruleId, uri, finding.excerpt.trim()]);
+    const occurrence = (occurrences.get(key) ?? 0) + 1;
+    occurrences.set(key, occurrence);
+    return {
+      ruleId: rule.ruleId,
+      ruleIndex,
+      level: level(rule.severity),
+      message: { text: `${rule.detail} ${rule.remediation}` },
+      locations: [{ physicalLocation: { artifactLocation: { uri }, region: { startLine: finding.line } } }],
+      partialFingerprints: { primaryLocationLineHash: `${(0, import_node_crypto2.createHash)("sha256").update(key).digest("hex")}:${occurrence}` },
+      ...suppressed ? { suppressions: [{ kind: "inSource", status: "accepted", justification: "Reviewed inline suppression; inspect the source directive for context." }] } : {}
+    };
+  });
+  return {
+    $schema: "https://json.schemastore.org/sarif-2.1.0.json",
+    version: "2.1.0",
+    runs: [{ tool: { driver: { name: "SkillCI", semanticVersion: TOOL_VERSION, informationUri: "https://github.com/LM20230311/skillci", rules } }, results }]
+  };
+}
+function assertContained(root, path2) {
+  const local = (0, import_node_path7.relative)(root, path2);
+  if (local === ".." || local.startsWith(`..${import_node_path7.sep}`) || (0, import_node_path7.isAbsolute)(local))
+    throw new Error("SARIF target and source files must be inside --source-root.");
+  return local;
+}
+function level(severity) {
+  return severity === "high" || severity === "critical" ? "error" : severity === "medium" ? "warning" : "note";
+}
+function compare2(a, b) {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
 // dist/index.js
 var HELP = `SkillCI \u2014 CI checks for AI agent skills
 
 Usage:
   skillci init [directory]
   skillci discover [path] [--format markdown|json]
-  skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
+  skillci audit <path> [--policy <file>] [--format markdown|json|github|sarif] [--source-root <directory>] [--output <file>] [--no-fail]
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
   skillci policy check <file> [--format markdown|json]
@@ -10998,24 +11078,44 @@ ${created.map((file) => `  - ${file}`).join("\n")}`);
   if (command !== "audit" && command !== "report") {
     throw new Error(`Unknown command: ${command}`);
   }
-  const target = args.find((argument) => !argument.startsWith("-"));
+  let target;
+  const values = /* @__PURE__ */ new Map();
+  let noFail = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--no-fail")
+      noFail = true;
+    else if (["--policy", "--format", "--output", "--source-root"].includes(argument)) {
+      const value = args[++index];
+      if (!value || value.startsWith("--"))
+        throw new Error(`${argument} requires a value.`);
+      values.set(argument, value);
+    } else if (argument.startsWith("-"))
+      throw new Error(`Unknown ${command} option: ${argument}`);
+    else if (target !== void 0)
+      throw new Error(`${command} accepts a single target.`);
+    else
+      target = argument;
+  }
   if (!target)
     throw new Error(`${command} requires a path.`);
-  const format = command === "report" ? "markdown" : option(args, "--format") ?? "markdown";
+  const format = command === "report" ? "markdown" : values.get("--format") ?? "markdown";
   if (!isFormat(format))
     throw new Error(`Unsupported format: ${format}`);
-  const result = audit(target, { policyPath: option(args, "--policy") });
-  const output = format === "json" ? `${JSON.stringify(result, null, 2)}
+  if (values.has("--source-root") && format !== "sarif")
+    throw new Error("--source-root is only supported with --format sarif.");
+  const result = audit(target, { policyPath: values.get("--policy") });
+  const output = format === "sarif" ? JSON.stringify(renderSarif(result, { sourceRoot: values.get("--source-root") }), null, 2) : format === "json" ? `${JSON.stringify(result, null, 2)}
 ` : format === "github" ? renderGitHubAnnotations(result) : renderMarkdown(result);
-  const outputPath = option(args, "--output");
+  const outputPath = values.get("--output");
   if (outputPath) {
-    (0, import_node_fs7.writeFileSync)(outputPath, output, "utf8");
+    (0, import_node_fs8.writeFileSync)(outputPath, output, "utf8");
     console.log(`Wrote report to ${outputPath}`);
   } else {
     console.log(output);
   }
   if (result.score === "critical" || result.score === "high") {
-    if (!args.includes("--no-fail"))
+    if (!noFail)
       process.exitCode = 1;
   }
 }
@@ -11036,7 +11136,7 @@ function positionalArgs(args) {
   return values;
 }
 function isFormat(value) {
-  return value === "markdown" || value === "json" || value === "github";
+  return value === "markdown" || value === "json" || value === "github" || value === "sarif";
 }
 main(process.argv.slice(2)).catch((error2) => {
   console.error(`SkillCI error: ${error2 instanceof Error ? error2.message : String(error2)}`);

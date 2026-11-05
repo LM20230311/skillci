@@ -21,20 +21,37 @@ inputs:
     description: Fail when high or critical findings are present.
     required: false
     default: "true"
+  sarif-output:
+    description: Optional SARIF output file, relative to the working directory. Upload separately with upload-sarif.
+    required: false
+    default: ""
+outputs:
+  sarif-file:
+    description: Requested SARIF file path (only written when sarif-output is set and scanning succeeds).
+    value: ${{ inputs.sarif-output }}
 runs:
   using: composite
   steps:
     - shell: bash
+      env:
+        SKILLCI_PATH: ${{ inputs.path }}
+        SKILLCI_POLICY: ${{ inputs.policy }}
+        SKILLCI_BASE_POLICY: ${{ inputs.base-policy }}
+        SKILLCI_FAIL: ${{ inputs.fail-on-risk }}
+        SKILLCI_SARIF: ${{ inputs.sarif-output }}
       run: |
         policy_args=()
-        if [ -n "${{ inputs.policy }}" ]; then
-          policy_args=(--policy "${{ inputs.policy }}")
+        if [ -n "$SKILLCI_POLICY" ]; then
+          policy_args=(--policy "$SKILLCI_POLICY")
         fi
-        if [ -n "${{ inputs.base-policy }}" ] && [ -n "${{ inputs.policy }}" ]; then
-          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" policy diff "${{ inputs.base-policy }}" "${{ inputs.policy }}" --format github
+        if [ -n "$SKILLCI_BASE_POLICY" ] && [ -n "$SKILLCI_POLICY" ]; then
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" policy diff "$SKILLCI_BASE_POLICY" "$SKILLCI_POLICY" --format github
         fi
-        if [ "${{ inputs.fail-on-risk }}" = "true" ]; then
-          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "${{ inputs.path }}" "${policy_args[@]}" --format github
+        if [ -n "$SKILLCI_SARIF" ]; then
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "$SKILLCI_PATH" "${policy_args[@]}" --format sarif --source-root "$GITHUB_WORKSPACE" --output "$SKILLCI_SARIF" --no-fail
+        fi
+        if [ "$SKILLCI_FAIL" = "true" ]; then
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "$SKILLCI_PATH" "${policy_args[@]}" --format github
         else
-          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "${{ inputs.path }}" "${policy_args[@]}" --format github --no-fail
+          node "$GITHUB_ACTION_PATH/dist/action/index.cjs" audit "$SKILLCI_PATH" "${policy_args[@]}" --format github --no-fail
         fi

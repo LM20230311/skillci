@@ -266,6 +266,21 @@ function withoutPattern(rule: Rule): Omit<Finding, "file" | "line" | "excerpt"> 
   return finding;
 }
 
+/** Stable descriptions for machine reports: never interpolate source or policy values. */
+export function auditRuleMetadata(): Omit<Finding, "file" | "line" | "excerpt">[] {
+  return [
+    ...RULES.map(withoutPattern),
+    ...[
+      ["SKILLCI101", "Policy denies network access", "Network access violates the selected policy.", "Remove the request or approve a narrowly scoped host."],
+      ["SKILLCI102", "Policy denies path access", "A referenced path violates the selected policy.", "Remove the access or review a narrower policy exception."],
+      ["SKILLCI103", "Policy denies command", "A command violates the selected policy.", "Remove the command or approve a narrowly scoped exception."],
+      ["SKILLCI104", "Network host is not allowlisted", "A network host cannot be verified against the selected allowlist.", "Use a reviewed host covered by the policy."],
+      ["SKILLCI105", "Policy denies working directory", "A working directory violates the selected policy.", "Run from an approved directory or review the policy."],
+      ["SKILLCI106", "Invalid suppression directive", "An inline suppression is invalid.", "Use an existing rule ID and a concise quoted reason for the next line only."]
+    ].map(([ruleId, title, detail, remediation]) => ({ ruleId, title, detail, remediation, severity: "high" as const }))
+  ];
+}
+
 function collectFiles(target: string): string[] {
   const targetStats = statSync(target);
   if (targetStats.isFile()) return isTextFile(target) ? [target] : [];

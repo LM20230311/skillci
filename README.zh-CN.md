@@ -257,6 +257,8 @@ SkillCI 仍会在 Markdown 与 GitHub Actions 输出中报告这条抑制、所�
 
 ## 接入 CI
 
+v0.6.0 源码预览：`audit --format sarif --source-root . --output skillci.sarif`，以及 Action 可选输入 `sarif-output`。详见 [SARIF 接入、隐私与上传示例](docs/SARIF.zh-CN.md)。已发布的 v0.5.0 CLI/Action 尚不包含该预览功能；实际 Code Scanning 验收待完成。
+
 在拥有 Skill 的仓库中，加入以下 GitHub Actions 工作流：
 
 ```yaml
@@ -377,7 +379,7 @@ skillci init [directory]
 skillci discover [path] [--format markdown|json]
 
 # 审计文件或目录。
-skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
+skillci audit <path> [--policy <file>] [--format markdown|json|github|sarif] [--source-root <directory>] [--output <file>] [--no-fail]
 
 # 输出 Markdown 报告。
 skillci report <path> [--policy <file>] [--output <file>] [--no-fail]

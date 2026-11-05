@@ -28,7 +28,7 @@ export type AuditResult = {
         deniedWorkingDirectories: string[];
     };
 };
-export type ReportFormat = "markdown" | "json" | "github";
+export type ReportFormat = "markdown" | "json" | "github" | "sarif";
 export type TestCaseResult = {
     name: string;
     caseFile: string;

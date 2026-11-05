@@ -7,6 +7,7 @@ import { initialize } from "./init.js";
 import { discover, renderDiscovery } from "./discovery.js";
 import { diffPolicies, renderPolicyDiff, renderPolicyDiffGitHub, renderPolicyValidation, validatePolicy } from "./policy.js";
 import { renderGitHubAnnotations, renderMarkdown } from "./report.js";
+import { renderSarif } from "./sarif.js";
 import type { ReportFormat } from "./types.js";
 
 const HELP = `SkillCI — CI checks for AI agent skills
@@ -14,7 +15,7 @@ const HELP = `SkillCI — CI checks for AI agent skills
 Usage:
   skillci init [directory]
   skillci discover [path] [--format markdown|json]
-  skillci audit <path> [--policy <file>] [--format markdown|json|github] [--output <file>] [--no-fail]
+  skillci audit <path> [--policy <file>] [--format markdown|json|github|sarif] [--source-root <directory>] [--output <file>] [--no-fail]
   skillci report <path> [--policy <file>] [--output <file>] [--no-fail]
   skillci test <cases-path> [--format markdown|json] [--no-fail]
   skillci policy check <file> [--format markdown|json]
@@ -128,14 +129,29 @@ async function main(argv: string[]): Promise<void> {
     throw new Error(`Unknown command: ${command}`);
   }
 
-  const target = args.find((argument) => !argument.startsWith("-"));
+  let target: string | undefined;
+  const values = new Map<string, string>();
+  let noFail = false;
+  for (let index = 0; index < args.length; index += 1) {
+    const argument = args[index];
+    if (argument === "--no-fail") noFail = true;
+    else if (["--policy", "--format", "--output", "--source-root"].includes(argument)) {
+      const value = args[++index];
+      if (!value || value.startsWith("--")) throw new Error(`${argument} requires a value.`);
+      values.set(argument, value);
+    } else if (argument.startsWith("-")) throw new Error(`Unknown ${command} option: ${argument}`);
+    else if (target !== undefined) throw new Error(`${command} accepts a single target.`);
+    else target = argument;
+  }
   if (!target) throw new Error(`${command} requires a path.`);
-  const format = command === "report" ? "markdown" : option(args, "--format") ?? "markdown";
+  const format = command === "report" ? "markdown" : values.get("--format") ?? "markdown";
   if (!isFormat(format)) throw new Error(`Unsupported format: ${format}`);
+  if (values.has("--source-root") && format !== "sarif") throw new Error("--source-root is only supported with --format sarif.");
 
-  const result = audit(target, { policyPath: option(args, "--policy") });
-  const output = format === "json" ? `${JSON.stringify(result, null, 2)}\n` : format === "github" ? renderGitHubAnnotations(result) : renderMarkdown(result);
-  const outputPath = option(args, "--output");
+  const result = audit(target, { policyPath: values.get("--policy") });
+  const output = format === "sarif" ? JSON.stringify(renderSarif(result, { sourceRoot: values.get("--source-root") }), null, 2)
+    : format === "json" ? `${JSON.stringify(result, null, 2)}\n` : format === "github" ? renderGitHubAnnotations(result) : renderMarkdown(result);
+  const outputPath = values.get("--output");
   if (outputPath) {
     writeFileSync(outputPath, output, "utf8");
     console.log(`Wrote report to ${outputPath}`);
@@ -144,7 +160,7 @@ async function main(argv: string[]): Promise<void> {
   }
 
   if (result.score === "critical" || result.score === "high") {
-    if (!args.includes("--no-fail")) process.exitCode = 1;
+    if (!noFail) process.exitCode = 1;
   }
 }
 
@@ -166,7 +182,7 @@ function positionalArgs(args: string[]): string[] {
 }
 
 function isFormat(value: string): value is ReportFormat {
-  return value === "markdown" || value === "json" || value === "github";
+  return value === "markdown" || value === "json" || value === "github" || value === "sarif";
 }
 
 main(process.argv.slice(2)).catch((error: unknown) => {

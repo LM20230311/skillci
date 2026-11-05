@@ -4,6 +4,15 @@ All notable changes to SkillCI are recorded in this file.
 
 ## [Unreleased]
 
+### Added
+
+- SARIF 2.1.0 output with stable rule metadata, source-root-relative locations, partial fingerprints and visible in-source suppressions; source excerpts and dynamic user messages are omitted.
+- Optional Action `sarif-output` / `sarif-file`, and a Code Scanning example workflow that retains artifacts on fork PRs.
+
+### Fixed
+
+- Parse audit options before the target correctly and pass composite Action inputs as quoted environment data instead of interpolating shell source.
+
 ## [0.5.0] - 2026-11-05
 
 ### Added
