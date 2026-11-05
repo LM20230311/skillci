@@ -257,7 +257,7 @@ SkillCI still reports the suppression, its location, and its reviewed reason in 
 
 ## Make it part of CI
 
-Source-checkout preview for v0.6.0: `audit --format sarif --source-root . --output skillci.sarif`, plus optional Action input `sarif-output`. See [SARIF integration, privacy, and upload examples](docs/SARIF.md). This preview is not included in the published v0.5.0 CLI/Action. [Validation](docs/SARIF_VALIDATION.md) exposed a fingerprint compatibility issue; the local fix now matches GitHub's upstream test vectors. Clean live lifecycle validation and real fork PR acceptance remain pending. Fingerprints are non-cryptographic; review reports before sharing outside the repository.
+Source-checkout preview for v0.6.0: `audit --format sarif --source-root . --output skillci.sarif`, plus optional Action input `sarif-output`. See [SARIF integration, privacy, and upload examples](docs/SARIF.md). This preview is not included in the published v0.5.0 CLI/Action. The corrected producer passed an [isolated live lifecycle test](docs/SARIF_VALIDATION.md#corrected-live-lifecycle-results): no fingerprint mismatch warnings, alert reuse after line movement, and automatic resolution of the matching branch/category instance. Real fork PR acceptance and v0.6.0 publication remain pending. Fingerprints are non-cryptographic; review reports before sharing outside the repository.
 
 Once you publish a release, add this to a workflow in the repository that owns the Skills:
 

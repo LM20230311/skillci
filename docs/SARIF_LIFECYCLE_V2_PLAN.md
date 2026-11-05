@@ -1,12 +1,12 @@
 # Corrected SARIF lifecycle plan — 2026-11-05
 
-Status: **prepared locally, not pushed**. This supersedes execution of the [stopped original sequence](SARIF_LIFECYCLE_PLAN.md); it does not erase its evidence or resume its third commit.
+Status: **all three approved pushes executed; controlled live lifecycle passed**. Upload logs had no inconsistent-fingerprint warnings; alert 7 was reused at lines 4 and 6, then its matching branch/category instance became fixed automatically. See [full live evidence](SARIF_VALIDATION.md#corrected-live-lifecycle-results). This supersedes execution of the [stopped original sequence](SARIF_LIFECYCLE_PLAN.md); it does not erase its evidence or resume its third commit. Commands below are the historical approved plan, not instructions to rerun it.
 
 ## Implementation and local evidence
 
 Product fix: `2ecbbf6174d93811ef89b7b4b877ff3787f287b8` (`fix: align SARIF line fingerprints with GitHub`). It includes source, generated output, fixed upstream vectors, attribution, bilingual documentation and prior live receipts. It is committed locally on `main`; remote `main` remains `98fa7ed`.
 
-Node 20 and Node 22 each passed 57 tests. The nine fixed upstream vectors and independently observed uploader value agree. All three candidate reports pass the official SARIF schema and phase assertions: one SKILLCI001 at line 4, the same hash at line 6, then zero results. The known line hash is `24b245e0e432c108:1`; it is not recomputed by the fixture checker. Packaging includes third-party notices; no runtime dependency was added. A clean live upload has NOT yet been established.
+Node 20 and Node 22 each passed 57 tests. The nine fixed upstream vectors and independently observed uploader value agree. All three candidate reports pass the official SARIF schema and phase assertions: one SKILLCI001 at line 4, the same hash at line 6, then zero results. The known line hash is `24b245e0e432c108:1`; it is not recomputed by the fixture checker. Packaging includes third-party notices; no runtime dependency was added. Clean live uploads and controlled lifecycle behavior are now established by the runs in the linked receipt.
 
 ## Isolated branch and prepared commits
 
@@ -26,7 +26,7 @@ Stable source URI: `validation/sarif-lifecycle/SKILL.md`.
 
 The three commits descend linearly from the fix commit, not the old validation branch. Only the source fixture and its expected phase change between them; the corrected producer and workflow remain constant. Fixture text is never executed. The explicit `--no-fail` is a report-only choice for this deliberately unsafe test, not a product-default change.
 
-## Exact proposed pushes — require explicit confirmation
+## Exact approved pushes — executed
 
 Remote `origin`: `https://github.com/LM20230311/skillci.git`.
 

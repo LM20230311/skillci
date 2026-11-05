@@ -131,8 +131,8 @@
 验收：
 
 - [x] schema 校验通过，本项目公共仓库真实上传后，GitHub 告警关联正确源文件位置；见 [线上验证记录](SARIF_VALIDATION.md)。
-- [ ] 同一 finding 重跑不产生无意义重复；修复后正确关闭。
-- [ ] 处理线上发现的 primaryLocationLineHash 与上传器计算值不一致警告；当前本地修复已通过固定上游向量，仍需重新做无该警告的跨提交/修复线上验收，不能视为整体验收。
+- [x] 受控 fixture 同一 finding 重跑/移行不产生重复；修复后匹配分支/category 实例自动关闭，见线上记录。此结论不扩展到任意编辑。
+- [x] primaryLocationLineHash 修复通过固定上游向量及新分支三阶段线上验收，全部上传日志无指纹不一致警告；fork PR 与发布仍单独验收。
 - [ ] secret、绝对宿主路径、Markdown/URI 特殊字符有专门处理与回归样例。
 - [ ] 默认只输出必要证据；脱敏规则不以“隐藏所有上下文”替代可解释性。
 - [ ] 文档注明 `security-events: write`，并验证公共仓库、fork PR 权限受限和私有仓库适用范围。

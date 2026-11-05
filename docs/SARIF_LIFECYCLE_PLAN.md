@@ -1,6 +1,6 @@
 # SARIF lifecycle validation plan — 2026-11-05
 
-Status: **user-approved sequence stopped after two pushes**. Baseline and shifted runs succeeded and reused alert 6, but both exposed an inconsistent-fingerprint warning. The fixed commit was not pushed. See [live evidence and diagnosis](SARIF_VALIDATION.md) and [the project plan](PROJECT_PLAN.md). This is an acceptance test, not a v0.6.0 release. Do not automatically resume the third push; fix compatibility and prepare a new concrete validation plan first.
+Status: **original sequence stopped after two pushes**. Baseline and shifted runs succeeded and reused alert 6, but both exposed an inconsistent-fingerprint warning. The old fixed commit remains unpushed. Compatibility was subsequently fixed and the separately approved [corrected sequence](SARIF_LIFECYCLE_V2_PLAN.md) passed all three live phases. See [live evidence and diagnosis](SARIF_VALIDATION.md) and [the project plan](PROJECT_PLAN.md). Do not resume this historical sequence's third push. No v0.6.0 release was created.
 
 ## Scope and isolation
 
