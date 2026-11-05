@@ -1,0 +1,6 @@
+{
+  "phase": "baseline",
+  "results": [
+    { "ruleId": "SKILLCI001", "line": 4 }
+  ]
+}
