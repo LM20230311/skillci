@@ -1,6 +1,4 @@
 {
-  "phase": "shifted",
-  "results": [
-    { "ruleId": "SKILLCI001", "line": 6 }
-  ]
+  "phase": "fixed",
+  "results": []
 }
